@@ -93,6 +93,8 @@
       <div class="grid-toolbar">
         <div class="muted" id="callSummary">No call data loaded.</div>
         <div class="grid-tools">
+          <button id="callViewToggleBtn" class="btn btn-small" disabled>View Call Data</button>
+          <button id="callLocationSourceBtn" class="btn btn-small" disabled>Location Source: All</button>
           <button id="exportCallsExcel" class="btn btn-small" disabled>Export Call Data</button>
         </div>
       </div>
@@ -115,8 +117,7 @@
   </main>
 
   <footer class="app-footer muted">
-    <span>Tip: run via a local web server (not file://) so the service worker can register.</span>
-    <span style="margin-left: 10px;">Build: <strong id="buildStamp">dev-46</strong></span>
+    <strong id="buildStamp">dev-50</strong>
   </footer>
 
   <!-- Load the app module with a visible error fallback (so failures aren't silent). -->
@@ -130,7 +131,7 @@
     };
 
     log('Bootstrapping app module…');
-    import('./app.js?v=48').then(() => {
+    import('./app.js?v=51').then(() => {
       log('App module loaded.');
     }).catch((err) => {
       console.error(err);

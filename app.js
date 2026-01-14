@@ -17,6 +17,8 @@ const els = {
   callCard: document.getElementById('callCard'),
   callSummary: document.getElementById('callSummary'),
   callTableContainer: document.getElementById('callTableContainer'),
+  callLocationSourceBtn: document.getElementById('callLocationSourceBtn'),
+  callViewToggleBtn: document.getElementById('callViewToggleBtn'),
   exportCallsExcel: document.getElementById('exportCallsExcel'),
   debugSection: document.getElementById('debugSection'),
   debugLog: document.getElementById('debugLog'),
@@ -92,6 +94,10 @@ const callState = {
     point_id: null,
     location_source: null,
   },
+};
+
+const callUi = {
+  showPreview: false,
 };
 
 const IDB_DB_NAME = 'resultsArchive';
@@ -462,6 +468,37 @@ function setExportEnabled(enabled) {
 function setCallsExportEnabled(enabled) {
   if (!els.exportCallsExcel) return;
   els.exportCallsExcel.disabled = !enabled;
+}
+
+function updateCallViewToggleButton() {
+  const btn = els.callViewToggleBtn;
+  if (!btn) return;
+
+  const canShow = Boolean(callState.records.length);
+  btn.disabled = !canShow;
+
+  if (!canShow) {
+    btn.textContent = 'View Call Data';
+    return;
+  }
+
+  btn.textContent = callUi.showPreview ? 'Hide Call Data' : 'View Call Data';
+}
+
+function updateCallLocationSourceButton() {
+  const btn = els.callLocationSourceBtn;
+  if (!btn) return;
+
+  const canShow = Boolean(callState.records.length) && Boolean(callState.dimCols?.location_source);
+  btn.disabled = !canShow;
+
+  if (!canShow) {
+    btn.textContent = 'Location Source: N/A';
+    return;
+  }
+
+  const selected = state.filters.location_source;
+  btn.textContent = `Location Source: ${selectionSummary(selected?.size ?? 0, 0)}`;
 }
 
 function safeFilePart(s) {
@@ -1157,6 +1194,7 @@ function applyFilters() {
   renderCallSummary();
   renderCallTable();
   setCallsExportEnabled(callState.filteredRecords.length > 0);
+  updateCallLocationSourceButton();
 }
 
 function clearAllFilters() {
@@ -1557,7 +1595,6 @@ function buildFiltersUI() {
   if (renderStandardFilter({ logicalKey: 'path_id', label: 'Path ID' })) addedAny = true;
   if (renderStandardFilter({ logicalKey: 'point_id', label: 'Point ID' })) addedAny = true;
   if (renderStandardFilter({ logicalKey: 'os', label: 'OS' })) addedAny = true;
-  if (renderStandardFilter({ logicalKey: 'location_source', label: 'Location Source' })) addedAny = true;
 
   if (els.filtersHint) {
     if (addedAny) {
@@ -1758,6 +1795,15 @@ function renderCallTable({ maxRows = 200 } = {}) {
     return;
   }
 
+  if (!callUi.showPreview) {
+    els.callTableContainer.innerHTML = `
+      <div class="placeholder">
+        Call preview is hidden. Click “View Call Data” to show a preview (first ${maxRows.toLocaleString()} rows).
+      </div>
+    `;
+    return;
+  }
+
   const cols = callState.columns ?? [];
   const slice = rows.slice(0, Math.max(0, maxRows));
 
@@ -1798,16 +1844,6 @@ function renderCallSummary() {
   if (callState.lastFileInfo?.name) parts.push(callState.lastFileInfo.name);
   parts.push(`Rows: ${callState.filteredRecords.length.toLocaleString()}/${callState.records.length.toLocaleString()}`);
 
-  const dim = callState.dimCols;
-  const dimBits = [];
-  if (dim.building) dimBits.push(`Building: ${dim.building}`);
-  if (dim.stage) dimBits.push(`Stage: ${dim.stage}`);
-  if (dim.participant) dimBits.push(`Participant: ${dim.participant}`);
-  if (dim.path_id) dimBits.push(`Path ID: ${dim.path_id}`);
-  if (dim.point_id) dimBits.push(`Point ID: ${dim.point_id}`);
-  if (dim.location_source) dimBits.push(`Location Source: ${dim.location_source}`);
-  if (dimBits.length) parts.push(`Detected: ${dimBits.join(' • ')}`);
-
   els.callSummary.textContent = parts.join(' • ');
 }
 
@@ -1832,6 +1868,8 @@ async function loadCallDatasetFromBytes({ bytes, fileInfo, saveToIdb = false, id
     renderCallSummary();
     renderCallTable();
     setCallsExportEnabled(callState.filteredRecords.length > 0);
+    updateCallLocationSourceButton();
+    updateCallViewToggleButton();
     updateSectionsVisibility();
 
     if (saveToIdb) {
@@ -1855,6 +1893,8 @@ async function loadCallDatasetFromBytes({ bytes, fileInfo, saveToIdb = false, id
     enableControls(true);
     if (els.zoomSelect) els.zoomSelect.disabled = false;
     setCallsExportEnabled(callState.filteredRecords.length > 0);
+    updateCallLocationSourceButton();
+    updateCallViewToggleButton();
     updateSectionsVisibility();
   }
 }
@@ -1882,6 +1922,58 @@ if (els.exportExcel) {
 
 if (els.exportCallsExcel) {
   els.exportCallsExcel.addEventListener('click', () => exportCallsToExcel());
+}
+
+if (els.callViewToggleBtn) {
+  // Default to hidden preview; allow user to toggle and remember preference.
+  try {
+    const saved = localStorage.getItem('resultsArchive.callPreview');
+    if (saved === '1') callUi.showPreview = true;
+  } catch {
+    // ignore
+  }
+
+  updateCallViewToggleButton();
+
+  els.callViewToggleBtn.addEventListener('click', () => {
+    if (!callState.records.length) return;
+    callUi.showPreview = !callUi.showPreview;
+    try {
+      localStorage.setItem('resultsArchive.callPreview', callUi.showPreview ? '1' : '0');
+    } catch {
+      // ignore
+    }
+    updateCallViewToggleButton();
+    renderCallTable();
+  });
+}
+
+if (els.callLocationSourceBtn) {
+  els.callLocationSourceBtn.addEventListener('click', () => {
+    if (!callState.records.length) return;
+    const col = callState.dimCols?.location_source;
+    if (!col) return;
+
+    // Scope options by selected Buildings + other active filters (excluding itself).
+    const scoped = buildingScopedRecordsByDim(callState.records, callState.dimCols);
+    const otherActive = getActiveFilters(['location_source']);
+    const preFiltered = otherActive.length ? filterRecordsWithActiveByDim(scoped, otherActive, callState.dimCols) : scoped;
+    const values = uniqSortedValues(preFiltered, col);
+
+    openMultiSelectPicker({
+      title: 'Location Source',
+      values,
+      selectedSet: state.filters.location_source,
+      onApply: (nextSet) => {
+        const set = state.filters.location_source;
+        set.clear();
+        for (const v of nextSet) set.add(v);
+        applyFilters();
+        buildFiltersUI();
+        render();
+      },
+    });
+  });
 }
 
 // Grid scale control
