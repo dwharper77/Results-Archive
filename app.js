@@ -9,6 +9,7 @@ const els = {
   gridSummary: document.getElementById('gridSummary'),
   zoomSelect: document.getElementById('zoomSelect'),
   exportExcel: document.getElementById('exportExcel'),
+  lastDatasetInfo: document.getElementById('lastDatasetInfo'),
   debugLog: document.getElementById('debugLog'),
   filtersContainer: document.getElementById('filtersContainer'),
   filtersHint: document.getElementById('filtersHint'),
@@ -34,6 +35,9 @@ const state = {
     h80: null,
     v80: null,
   },
+
+  lastFileInfo: null,
+  pendingRestore: null,
 
   dimCols: {
     stage: null,
@@ -61,6 +65,141 @@ const state = {
   knownBuildings: [],
   knownBuildingsLowerMap: new Map(),
 };
+
+const STORAGE_KEY_LAST_SESSION = 'resultsArchive.lastSession.v1';
+
+function formatBytes(n) {
+  const num = Number(n);
+  if (!Number.isFinite(num) || num <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let i = 0;
+  let v = num;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  const digits = i === 0 ? 0 : (i === 1 ? 1 : 2);
+  return `${v.toFixed(digits)} ${units[i]}`;
+}
+
+function safeJsonParse(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+function getSavedSession() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_LAST_SESSION);
+    return raw ? safeJsonParse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setSavedSession(session) {
+  try {
+    localStorage.setItem(STORAGE_KEY_LAST_SESSION, JSON.stringify(session));
+  } catch {
+    // ignore (storage quota / private mode)
+  }
+}
+
+function serializeFilters() {
+  const out = {};
+  for (const [k, set] of Object.entries(state.filters)) {
+    out[k] = Array.from(set ?? []);
+  }
+  return out;
+}
+
+function serializeIdBySection() {
+  const out = {};
+  for (const [sec, set] of state.idBySection.entries()) {
+    out[sec] = Array.from(set ?? []);
+  }
+  return out;
+}
+
+function applySavedSessionToState(saved) {
+  if (!saved || typeof saved !== 'object') return;
+
+  // Prefer saved column mappings if they still exist.
+  if (saved.dimCols && typeof saved.dimCols === 'object') {
+    for (const [k, v] of Object.entries(saved.dimCols)) {
+      if (typeof v === 'string' && state.columns.includes(v)) state.dimCols[k] = v;
+    }
+  }
+  if (saved.metricCols && typeof saved.metricCols === 'object') {
+    const next = { ...state.metricCols };
+    if (typeof saved.metricCols.h80 === 'string' && state.columns.includes(saved.metricCols.h80)) next.h80 = saved.metricCols.h80;
+    if (typeof saved.metricCols.v80 === 'string' && state.columns.includes(saved.metricCols.v80)) next.v80 = saved.metricCols.v80;
+    state.metricCols = next;
+  }
+
+  // Restore filter selections.
+  if (saved.filters && typeof saved.filters === 'object') {
+    for (const [k, arr] of Object.entries(saved.filters)) {
+      if (!state.filters[k] || !Array.isArray(arr)) continue;
+      state.filters[k].clear();
+      for (const v of arr) {
+        if (v === null || v === undefined) continue;
+        state.filters[k].add(String(v));
+      }
+    }
+  }
+
+  state.idBySection.clear();
+  if (saved.idBySection && typeof saved.idBySection === 'object') {
+    for (const [sec, arr] of Object.entries(saved.idBySection)) {
+      if (!Array.isArray(arr) || !sec) continue;
+      const set = new Set();
+      for (const v of arr) {
+        if (v === null || v === undefined) continue;
+        set.add(String(v));
+      }
+      if (set.size) state.idBySection.set(String(sec), set);
+    }
+  }
+
+  // Restore building text input (does not force-apply; selection restoration handles it).
+  if (els.buildingText && typeof saved.buildingText === 'string') {
+    els.buildingText.value = saved.buildingText;
+  }
+}
+
+function updateLastDatasetInfo() {
+  if (!els.lastDatasetInfo) return;
+  const saved = getSavedSession();
+  const f = saved?.file;
+  if (!f || !f.name) {
+    els.lastDatasetInfo.textContent = '';
+    return;
+  }
+
+  const parts = [];
+  parts.push(`Last loaded: ${f.name}`);
+  if (f.size) parts.push(formatBytes(f.size));
+  if (f.lastModified) parts.push(new Date(f.lastModified).toLocaleString());
+  els.lastDatasetInfo.textContent = parts.join(' • ');
+}
+
+function persistCurrentSession() {
+  if (!state.lastFileInfo || !state.records.length) return;
+  const session = {
+    savedAt: Date.now(),
+    file: state.lastFileInfo,
+    dimCols: state.dimCols,
+    metricCols: state.metricCols,
+    filters: serializeFilters(),
+    idBySection: serializeIdBySection(),
+    buildingText: els.buildingText?.value ?? '',
+  };
+  setSavedSession(session);
+  updateLastDatasetInfo();
+}
 
 const METRICS = ['h80', 'v80'];
 const METRIC_LABELS = {
@@ -179,6 +318,9 @@ function logDebug(message) {
 // Visible startup confirmation (helps diagnose caching / module-load issues).
 setStatus('Ready. Choose a .pkl file to begin.');
 logDebug('app.js initialized.');
+
+// Show remembered dataset info on startup.
+updateLastDatasetInfo();
 
 function setGridZoom(value) {
   const v = Number(value);
@@ -681,6 +823,7 @@ function applyBuildingTextFilter() {
   applyFilters();
   buildFiltersUI();
   render();
+  persistCurrentSession();
 }
 
 function clearBuildingTextFilter() {
@@ -690,6 +833,7 @@ function clearBuildingTextFilter() {
   applyFilters();
   buildFiltersUI();
   render();
+  persistCurrentSession();
 }
 
 function getRowHeaderCols() {
@@ -778,6 +922,7 @@ function clearAllFilters() {
   applyFilters();
   buildFiltersUI();
   render();
+  persistCurrentSession();
 }
 
 function selectionSummary(selectedCount, totalCount) {
@@ -1034,6 +1179,7 @@ function buildFiltersUI() {
           applyFilters();
           buildFiltersUI();
           render();
+          persistCurrentSession();
         },
       });
     });
@@ -1131,6 +1277,7 @@ function buildFiltersUI() {
               applyFilters();
               buildFiltersUI();
               render();
+              persistCurrentSession();
             },
           });
         });
@@ -1250,6 +1397,12 @@ async function onFileSelected(file) {
   setStatus('Reading file…');
   logDebug(`File selected: ${file?.name ?? '(unknown)'} (${file?.size ?? 0} bytes)`);
 
+  const saved = getSavedSession();
+  const shouldRestore = Boolean(saved?.file?.name) && saved.file.name === file?.name;
+  if (saved?.file?.name && !shouldRestore) {
+    logDebug(`Saved session found for a different file (${saved.file.name}); not auto-restoring.`);
+  }
+
   try {
     const buf = await file.arrayBuffer();
     const bytes = new Uint8Array(buf);
@@ -1265,6 +1418,13 @@ async function onFileSelected(file) {
     state.metricCols = guessMetricColumns(columns);
     state.records = records;
 
+    state.lastFileInfo = {
+      name: file?.name ?? '',
+      size: file?.size ?? 0,
+      lastModified: file?.lastModified ?? 0,
+      type: file?.type ?? '',
+    };
+
     // Cache known building values for case-insensitive mapping (manual input).
     state.knownBuildings = [];
     state.knownBuildingsLowerMap = new Map();
@@ -1278,6 +1438,19 @@ async function onFileSelected(file) {
     for (const k of Object.keys(state.filters)) state.filters[k].clear();
     state.idBySection.clear();
     if (els.buildingText) els.buildingText.value = '';
+
+    if (shouldRestore) {
+      logDebug('Auto-restoring last selections (same filename).');
+      applySavedSessionToState(saved);
+
+      // Prune building selections that no longer exist in the dataset.
+      if (state.filters.building.size && state.knownBuildings.length) {
+        const allowed = new Set(state.knownBuildings);
+        for (const v of Array.from(state.filters.building)) {
+          if (!allowed.has(v)) state.filters.building.delete(v);
+        }
+      }
+    }
 
     populateBuildingSelectOptions();
     syncBuildingSelectFromState();
@@ -1299,10 +1472,17 @@ async function onFileSelected(file) {
     enableControls(true);
     if (els.zoomSelect) els.zoomSelect.disabled = false;
     setExportEnabled(false);
-    setStatus(`Loaded ${records.length.toLocaleString()} rows. Select building(s) above to begin.`);
+    setStatus(
+      shouldRestore
+        ? `Loaded ${records.length.toLocaleString()} rows. Restored last selections (if still available).`
+        : `Loaded ${records.length.toLocaleString()} rows. Select building(s) above to begin.`
+    );
     logDebug(`Loaded ${records.length} rows, ${columns.length} columns.`);
 
     render();
+
+    // Save session immediately so the new dataset metadata is remembered.
+    persistCurrentSession();
   } catch (err) {
     console.error(err);
     setStatus(`Load failed: ${err?.message ?? String(err)}`, { error: true });
@@ -1362,6 +1542,7 @@ if (els.buildingSelect) {
     applyFilters();
     buildFiltersUI();
     render();
+    persistCurrentSession();
   });
 }
 if (els.selectAllBuildings && els.buildingSelect) {
@@ -1372,6 +1553,7 @@ if (els.selectAllBuildings && els.buildingSelect) {
     applyFilters();
     buildFiltersUI();
     render();
+    persistCurrentSession();
   });
 }
 if (els.clearBuildings && els.buildingSelect) {
@@ -1381,6 +1563,7 @@ if (els.clearBuildings && els.buildingSelect) {
     applyFilters();
     buildFiltersUI();
     render();
+    persistCurrentSession();
   });
 }
 

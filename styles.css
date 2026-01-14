@@ -22,6 +22,7 @@ body {
 }
 
 .muted { color: var(--muted); }
+.small { font-size: 11px; }
 
 .app-header {
   position: sticky;

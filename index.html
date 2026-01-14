@@ -26,6 +26,7 @@
       <label class="file">
         <span class="label">Dataset (.pkl)</span>
         <input id="fileInput" type="file" accept=".pkl,.pickle,application/octet-stream" />
+        <div id="lastDatasetInfo" class="muted small"></div>
       </label>
 
       <div class="building-picker">
@@ -97,7 +98,7 @@
 
   <footer class="app-footer muted">
     <span>Tip: run via a local web server (not file://) so the service worker can register.</span>
-    <span style="margin-left: 10px;">Build: <strong id="buildStamp">dev-39</strong></span>
+    <span style="margin-left: 10px;">Build: <strong id="buildStamp">dev-40</strong></span>
   </footer>
 
   <!-- Load the app module with a visible error fallback (so failures aren't silent). -->
@@ -111,7 +112,7 @@
     };
 
     log('Bootstrapping app module…');
-    import('./app.js?v=41').then(() => {
+    import('./app.js?v=42').then(() => {
       log('App module loaded.');
     }).catch((err) => {
       console.error(err);
