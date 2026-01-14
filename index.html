@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>Results Archive</title>
+
+  <link rel="manifest" href="./manifest.json?v=1" />
+  <link rel="stylesheet" href="./styles.css?v=24" />
+
+  <!-- Pyodide runtime (client-side Python + pandas). Loaded from CDN. -->
+  <!-- You can pin/upgrade the version here later if needed. -->
+  <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-title">
+      <h1>Results Archive</h1>
+    </div>
+
+    <div class="app-controls">
+      <label class="file">
+        <span class="label">Dataset (.pkl)</span>
+        <input id="fileInput" type="file" accept=".pkl,.pickle,application/octet-stream" />
+      </label>
+
+      <div class="building-picker">
+        <div class="building-picker-head">
+          <span class="label">Building(s)</span>
+          <div class="building-picker-actions">
+            <button id="selectAllBuildings" class="btn btn-small" disabled>Select all</button>
+            <button id="clearBuildings" class="btn btn-small" disabled>Clear</button>
+          </div>
+        </div>
+        <select id="buildingSelect" multiple size="4" disabled></select>
+        <div class="building-text-actions">
+          <input id="buildingText" type="text" disabled placeholder="Or type comma-separated (e.g., ATLDBC50, CHIDBC12)" />
+          <button id="applyBuildingText" class="btn btn-small" disabled>Apply</button>
+          <button id="clearBuildingText" class="btn btn-small" disabled>Clear</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <section class="status" aria-live="polite">
+      <div id="statusText" class="status-text">Upload a .pkl file to begin.</div>
+
+      <details class="status-details">
+        <summary>Filters</summary>
+        <div id="filtersHint" class="muted" style="margin-top: 8px;">Load a file to enable filters.</div>
+        <div id="filtersContainer" class="filters"></div>
+        <div class="filters-actions">
+          <button id="clearFilters" class="btn" disabled>Clear filters</button>
+        </div>
+      </details>
+    </section>
+
+    <section class="grid-card">
+      <div class="grid-toolbar">
+        <div class="muted" id="gridSummary">No data loaded.</div>
+        <div class="grid-tools">
+          <label>
+            <span class="label">Scale</span>
+            <select id="zoomSelect" disabled>
+              <option value="1">100%</option>
+              <option value="0.9">90%</option>
+              <option value="0.8">80%</option>
+              <option value="0.7">70%</option>
+              <option value="0.6">60%</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="gridContainer" class="grid-container">
+        <div class="placeholder">Waiting for dataset…</div>
+      </div>
+    </section>
+
+    <section class="status">
+      <details class="status-details">
+        <summary>Detected columns</summary>
+        <pre id="columnsPreview" class="pre"></pre>
+      </details>
+
+      <details class="status-details">
+        <summary>Debug log</summary>
+        <pre id="debugLog" class="pre"></pre>
+      </details>
+    </section>
+  </main>
+
+  <footer class="app-footer muted">
+    <span>Tip: run via a local web server (not file://) so the service worker can register.</span>
+    <span style="margin-left: 10px;">Build: <strong id="buildStamp">dev-31</strong></span>
+  </footer>
+
+  <!-- Load the app module with a visible error fallback (so failures aren't silent). -->
+  <script type="module">
+    const logEl = document.getElementById('debugLog');
+    const statusEl = document.getElementById('statusText');
+    const log = (msg) => {
+      if (!logEl) return;
+      const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logEl.textContent += (logEl.textContent ? "\n" : "") + line;
+    };
+
+    log('Bootstrapping app module…');
+    import('./app.js?v=35').then(() => {
+      log('App module loaded.');
+    }).catch((err) => {
+      console.error(err);
+      if (statusEl) {
+        statusEl.textContent = `App failed to start: ${err?.message ?? String(err)}`;
+        statusEl.style.color = 'var(--danger)';
+      }
+      log(`App failed to start: ${err?.stack ?? (err?.message ?? String(err))}`);
+    });
+  </script>
+  <script>
+    // Basic SW registration for the app shell.
+    // (Service worker doesn't cache Pyodide CDN assets by default.)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+          // Encourage quick updates while iterating.
+          reg.update().catch(() => {});
+        }).catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
