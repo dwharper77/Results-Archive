@@ -185,6 +185,11 @@ function formatDateForFilename(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
 }
 
+function formatDateYmdHm(d) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function buildFiltersSummaryAoA() {
   const lines = [];
   const setToText = (set) => {
@@ -238,22 +243,32 @@ function exportCurrentPivotToExcel() {
   const metricKeys = METRICS;
   const metricCount = metricKeys.length;
 
-  // Build a two-row header like the UI, but make subheaders unique for Excel filtering.
-  const headerTop = Array(leftCount).fill('');
+  const lastCol = leftCount + stages.length * metricCount - 1;
+
+  // Title + generated rows (like the screenshot).
+  const now = new Date();
+  const titleRow = ['Stage Comparison', ...Array(lastCol).fill('')];
+  const generatedRow = [`Generated ${formatDateYmdHm(now)}`, ...Array(lastCol).fill('')];
+  const spacerRow = Array(lastCol + 1).fill('');
+
+  // Build a two-row header like the screenshot:
+  // Row 1: left column labels + merged stage group headers.
+  // Row 2: (blank under left headers) + metric subheaders (Hor/Ver 80%).
+  const headerTop = leftCols.map((c) => String(c?.label ?? c?.key ?? ''));
   for (const s of stages) {
-    headerTop.push(String(s));
+    const stageLabel = String(s).toLowerCase().startsWith('stage ') ? String(s) : `Stage ${s}`;
+    headerTop.push(stageLabel);
     for (let i = 1; i < metricCount; i++) headerTop.push('');
   }
 
-  const headerSub = leftCols.map((c) => String(c?.label ?? c?.key ?? ''));
-  for (const s of stages) {
+  const headerSub = Array(leftCount).fill('');
+  for (const _s of stages) {
     for (const m of metricKeys) {
-      const ml = METRIC_LABELS[m] ?? m;
-      headerSub.push(`${s} ${ml}`);
+      headerSub.push(String(METRIC_LABELS[m] ?? m));
     }
   }
 
-  const aoa = [headerTop, headerSub];
+  const aoa = [titleRow, generatedRow, spacerRow, headerTop, headerSub];
 
   for (const rowId of pivot.rows) {
     const meta = pivot.rowMeta?.get(rowId) ?? {};
@@ -276,23 +291,34 @@ function exportCurrentPivotToExcel() {
 
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-  const lastCol = leftCount + stages.length * metricCount - 1;
   const lastRow = aoa.length - 1;
 
-  // Stage merges in the top header row.
+  // Merges: title + generated lines, vertical merges for left headers, and stage group merges.
   ws['!merges'] = ws['!merges'] || [];
+  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } });
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } });
+
+  const HEADER_TOP_ROW = 3;
+  const HEADER_SUB_ROW = 4;
+  const DATA_START_ROW = 5;
+
+  // Merge each left header cell down across the two header rows.
+  for (let c = 0; c < leftCount; c++) {
+    ws['!merges'].push({ s: { r: HEADER_TOP_ROW, c }, e: { r: HEADER_SUB_ROW, c } });
+  }
+
+  // Merge stage group headers across their metric columns in the top header row.
   for (let i = 0; i < stages.length; i++) {
     const start = leftCount + i * metricCount;
     const end = start + metricCount - 1;
-    if (end > start) ws['!merges'].push({ s: { r: 0, c: start }, e: { r: 0, c: end } });
+    if (end > start) ws['!merges'].push({ s: { r: HEADER_TOP_ROW, c: start }, e: { r: HEADER_TOP_ROW, c: end } });
   }
 
-  // Freeze panes (2 header rows + left identity columns).
-  const topLeftCell = XLSX.utils.encode_cell({ r: 2, c: leftCount });
-  ws['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: leftCount, ySplit: 2, topLeftCell, activePane: 'bottomRight' } }];
-
-  // AutoFilter on the second header row.
-  ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } }) };
+  // Freeze panes so the row with the 80%s stays frozen.
+  // Freezing at HEADER_SUB_ROW + 1 freezes title + generated + spacer + both header rows.
+  const ySplit = HEADER_SUB_ROW + 1;
+  const topLeftCell = XLSX.utils.encode_cell({ r: ySplit, c: leftCount });
+  ws['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: leftCount, ySplit, topLeftCell, activePane: 'bottomRight' } }];
 
   // Column widths (roughly based on text length).
   const maxChars = new Array(lastCol + 1).fill(6);
@@ -311,46 +337,42 @@ function exportCurrentPivotToExcel() {
     return { wch: Math.min(64, Math.max(8, wch + bonus)) };
   });
 
-  // Styling (xlsx-js-style)
-  const BORDER = {
-    top: { style: 'thin', color: { rgb: 'FF2A3550' } },
-    bottom: { style: 'thin', color: { rgb: 'FF2A3550' } },
-    left: { style: 'thin', color: { rgb: 'FF2A3550' } },
-    right: { style: 'thin', color: { rgb: 'FF2A3550' } },
+  // Styling (xlsx-js-style) — match the screenshot style (bold title, dark blue headers, crisp borders).
+  const BORDER_THIN_BLACK = {
+    top: { style: 'thin', color: { rgb: 'FF000000' } },
+    bottom: { style: 'thin', color: { rgb: 'FF000000' } },
+    left: { style: 'thin', color: { rgb: 'FF000000' } },
+    right: { style: 'thin', color: { rgb: 'FF000000' } },
   };
 
-  const STYLE_TOP = {
-    font: { bold: true, color: { rgb: 'FFFFFFFF' } },
-    fill: { patternType: 'solid', fgColor: { rgb: 'FF0F172A' } },
-    alignment: { horizontal: 'center', vertical: 'center' },
-    border: BORDER,
+  const HEADER_FILL = 'FF0F3B5E';
+
+  const STYLE_TITLE = {
+    font: { bold: true, sz: 18, color: { rgb: 'FF000000' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
   };
 
-  const STYLE_SUB = {
+  const STYLE_GENERATED = {
+    font: { italic: true, sz: 10, color: { rgb: 'FF333333' } },
+    alignment: { horizontal: 'left', vertical: 'center' },
+  };
+
+  const STYLE_HDR = {
     font: { bold: true, color: { rgb: 'FFFFFFFF' } },
-    fill: { patternType: 'solid', fgColor: { rgb: 'FF121B2E' } },
+    fill: { patternType: 'solid', fgColor: { rgb: HEADER_FILL } },
     alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-    border: BORDER,
-  };
-
-  const STYLE_LEFT_SUB = {
-    ...STYLE_SUB,
-    alignment: { horizontal: 'left', vertical: 'center', wrapText: true },
-  };
-
-  const STYLE_NUM = {
-    alignment: { horizontal: 'right', vertical: 'top' },
-    border: BORDER,
-    numFmt: '0.00',
+    border: BORDER_THIN_BLACK,
   };
 
   const STYLE_TEXT = {
     alignment: { horizontal: 'left', vertical: 'top' },
-    border: BORDER,
+    border: BORDER_THIN_BLACK,
   };
 
-  const STYLE_ZEBRA = {
-    fill: { patternType: 'solid', fgColor: { rgb: 'FF0B1220' } },
+  const STYLE_NUM = {
+    alignment: { horizontal: 'right', vertical: 'top' },
+    border: BORDER_THIN_BLACK,
+    numFmt: '0.0',
   };
 
   const applyStyle = (r, c, style) => {
@@ -362,28 +384,34 @@ function exportCurrentPivotToExcel() {
 
   // Row heights
   ws['!rows'] = ws['!rows'] || [];
-  ws['!rows'][0] = { hpt: 22 };
-  ws['!rows'][1] = { hpt: 28 };
+  ws['!rows'][0] = { hpt: 28 };
+  ws['!rows'][1] = { hpt: 16 };
+  ws['!rows'][2] = { hpt: 8 };
+  ws['!rows'][HEADER_TOP_ROW] = { hpt: 22 };
+  ws['!rows'][HEADER_SUB_ROW] = { hpt: 20 };
 
-  // Header styles
+  // Title / generated styles (merged across)
   for (let c = 0; c <= lastCol; c++) {
-    applyStyle(0, c, STYLE_TOP);
-    applyStyle(1, c, c < leftCount ? STYLE_LEFT_SUB : STYLE_SUB);
+    applyStyle(0, c, STYLE_TITLE);
+    applyStyle(1, c, STYLE_GENERATED);
   }
 
-  // Data styles + zebra striping
-  for (let r = 2; r <= lastRow; r++) {
-    const zebra = (r % 2 === 0) ? STYLE_ZEBRA : null;
+  // Header styles (both header rows)
+  for (let c = 0; c <= lastCol; c++) {
+    applyStyle(HEADER_TOP_ROW, c, STYLE_HDR);
+    applyStyle(HEADER_SUB_ROW, c, STYLE_HDR);
+  }
+
+  // Data styles
+  for (let r = DATA_START_ROW; r <= lastRow; r++) {
     for (let c = 0; c <= lastCol; c++) {
       const isMetric = c >= leftCount;
-      const base = isMetric ? STYLE_NUM : STYLE_TEXT;
-      applyStyle(r, c, base);
-      if (zebra) applyStyle(r, c, zebra);
+      applyStyle(r, c, isMetric ? STYLE_NUM : STYLE_TEXT);
     }
   }
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Results');
+  XLSX.utils.book_append_sheet(wb, ws, 'Stage Comparison');
 
   // Filters/metadata sheet
   const ws2 = XLSX.utils.aoa_to_sheet(buildFiltersSummaryAoA());
@@ -394,7 +422,7 @@ function exportCurrentPivotToExcel() {
   const buildingPart = state.filters.building && state.filters.building.size
     ? `_${safeFilePart(Array.from(state.filters.building).slice(0, 3).join('-'))}${state.filters.building.size > 3 ? '_and_more' : ''}`
     : '';
-  const filename = `Results_Archive_${formatDateForFilename(dt)}${buildingPart}.xlsx`;
+  const filename = `Stage_Comparison_${formatDateForFilename(dt)}${buildingPart}.xlsx`;
 
   try {
     XLSX.writeFile(wb, filename, { compression: true });
