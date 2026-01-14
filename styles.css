@@ -49,6 +49,7 @@ body {
   gap: 12px;
   /* Avoid large vertical dead space next to the taller building picker */
   align-items: start;
+  justify-items: stretch;
 }
 
 .building-picker {
@@ -165,6 +166,13 @@ input[type="file"], input[type="text"], select {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Allow the left summary to shrink/wrap instead of pushing tools off-screen. */
+.grid-toolbar #gridSummary {
+  flex: 1 1 520px;
+  min-width: 0;
 }
 
 .grid-tools {
@@ -274,14 +282,31 @@ input[type="file"], input[type="text"], select {
   .app-controls {
     grid-template-columns: 1fr;
     align-items: stretch;
+    justify-items: stretch;
   }
   .view-buttons { justify-content: flex-start; }
 }
 
 @media (min-width: 981px) {
   .app-controls {
-    grid-template-columns: minmax(320px, 520px) 1fr;
+    /* Size sections to content instead of stretching full width */
+    grid-template-columns: max-content max-content;
     align-items: start;
+    justify-items: start;
+  }
+
+  /* Cap widths so they remain usable and don't overflow the window */
+  label.file input[type="file"] {
+    width: min(680px, 92vw);
+  }
+
+  .building-picker select {
+    width: min(680px, 92vw);
+  }
+
+  .building-picker .building-text-actions input[type="text"] {
+    width: min(680px, 92vw);
+    flex: 0 1 auto;
   }
 }
 
