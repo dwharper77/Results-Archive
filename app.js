@@ -223,6 +223,22 @@ async function idbGetPkl(key) {
   }
 }
 
+async function idbDeletePkl(key) {
+  const db = await openIdb();
+  try {
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE_FILES, 'readwrite');
+      const store = tx.objectStore(IDB_STORE_FILES);
+      store.delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error ?? new Error('IndexedDB delete failed'));
+      tx.onabort = () => reject(tx.error ?? new Error('IndexedDB delete aborted'));
+    });
+  } finally {
+    db.close();
+  }
+}
+
 async function idbSetPkl(key, { file, bytes }) {
   const db = await openIdb();
   try {
@@ -404,11 +420,21 @@ function logDebug(message) {
 }
 
 // Visible startup confirmation (helps diagnose caching / module-load issues).
-setStatus('Checking for a saved dataset…');
+setStatus('Ready. Choose .pkl file(s) to begin.');
 logDebug('app.js initialized.');
 
-// Show saved dataset info on startup (if any).
-refreshLastDatasetInfo();
+// No previous-session restore: clear any legacy saved blobs and hide the info rows.
+(async () => {
+  try {
+    if (els.lastDatasetInfo) els.lastDatasetInfo.textContent = '';
+    if (els.lastCallDatasetInfo) els.lastCallDatasetInfo.textContent = '';
+    await idbDeletePkl(IDB_KEY_ARCHIVE_PKL);
+    await idbDeletePkl(IDB_KEY_CALL_PKL);
+    logDebug('Cleared any previously saved PKLs (previous-session restore disabled).');
+  } catch {
+    // ignore
+  }
+})();
 
 function setGridZoom(value) {
   const v = Number(value);
@@ -2049,15 +2075,6 @@ async function onFileSelected(file) {
     render();
 
     updateSectionsVisibility();
-
-    // Save the actual PKL so the app can auto-load it next time.
-    try {
-      await idbSetPkl(IDB_KEY_ARCHIVE_PKL, { file, bytes });
-      await refreshLastDatasetInfo();
-      logDebug('Saved dataset to IndexedDB for next launch.');
-    } catch (e) {
-      logDebug(`Could not save dataset for next launch: ${e?.message ?? String(e)}`);
-    }
   } catch (err) {
     console.error(err);
     setStatus(`Load failed: ${err?.message ?? String(err)}`, { error: true });
@@ -2157,7 +2174,6 @@ async function loadCallDatasetFromBytes({ bytes, fileInfo, saveToIdb = false, id
     if (saveToIdb) {
       try {
         await idbSetPkl(IDB_KEY_CALL_PKL, { file: idbFile, bytes });
-        await refreshLastDatasetInfo();
         logDebug('Saved call dataset to IndexedDB for next launch.');
       } catch (e) {
         logDebug(`Could not save call dataset for next launch: ${e?.message ?? String(e)}`);
@@ -2198,7 +2214,7 @@ async function onCallFileSelected(file) {
     type: file?.type ?? '',
   };
 
-  await loadCallDatasetFromBytes({ bytes, fileInfo, saveToIdb: true, idbFile: file });
+  await loadCallDatasetFromBytes({ bytes, fileInfo, saveToIdb: false, idbFile: null });
 }
 
 if (els.exportExcel) {
@@ -2336,119 +2352,7 @@ if (els.clearBuildings && els.buildingSelect) {
   });
 }
 
-async function tryAutoLoadSavedDataset() {
-  enableControls(false);
-  try {
-    const rec = await idbGetPkl(IDB_KEY_ARCHIVE_PKL);
-    if (!rec?.blob || !rec?.meta?.name) {
-      setStatus('Ready. Choose a .pkl file to begin.');
-      enableControls(true);
-      return false;
-    }
 
-    setFileStatus('archive', 'Loaded previous session');
-    setStatus(`Auto-loading saved dataset: ${rec.meta.name} (starting Pyodide)…`);
-    logDebug(`Auto-loading saved dataset: ${rec.meta.name}`);
-
-    await ensurePyodideAvailable();
-
-    const buf = await rec.blob.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-
-    // Reuse the same load path, but without a File input.
-    const fakeFile = {
-      name: rec.meta.name,
-      size: rec.meta.size,
-      lastModified: rec.meta.lastModified,
-      type: rec.meta.type,
-    };
-
-    const { columns, records } = await unpickleDataFrameToRecords(bytes);
-
-    state.columns = columns;
-    state.dimCols = guessDimensionColumns(columns);
-    state.metricCols = guessMetricColumns(columns);
-    state.records = records;
-    state.lastFileInfo = fakeFile;
-
-    // Cache known building values for case-insensitive mapping (manual input).
-    state.knownBuildings = [];
-    state.knownBuildingsLowerMap = new Map();
-    if (state.dimCols.building) {
-      const vals = uniqSortedValues(state.records, state.dimCols.building, 20000);
-      state.knownBuildings = vals;
-      for (const v of vals) state.knownBuildingsLowerMap.set(String(v).toLowerCase(), v);
-    }
-    logDebug(`Auto-load: detected building column: ${state.dimCols.building ?? '(none)'}; buildings found: ${state.knownBuildings.length}`);
-
-    // Reset filters on auto-load (per request).
-    for (const k of Object.keys(state.filters)) state.filters[k].clear();
-    state.idBySection.clear();
-    if (els.buildingText) els.buildingText.value = '';
-
-    updateSectionsVisibility();
-
-    populateBuildingSelectOptions();
-    syncBuildingSelectFromState();
-
-    applyFilters();
-    buildFiltersUI();
-
-    enableControls(true);
-    if (els.zoomSelect) els.zoomSelect.disabled = false;
-    setExportEnabled(false);
-    setStatus(`Loaded ${records.length.toLocaleString()} rows (auto-loaded). Select building(s) above to begin.`);
-    logDebug(`Auto-loaded ${records.length} rows, ${columns.length} columns.`);
-    render();
-
-    updateSectionsVisibility();
-
-    return true;
-  } catch (e) {
-    logDebug(`Auto-load failed: ${e?.message ?? String(e)}`);
-    setStatus('Ready. Choose a .pkl file to begin.');
-    setFileStatus('archive', 'No file chosen');
-    enableControls(true);
-    updateSectionsVisibility();
-    return false;
-  }
-}
-
-async function tryAutoLoadSavedCallDataset() {
-  try {
-    const rec = await idbGetPkl(IDB_KEY_CALL_PKL);
-    if (!rec?.blob || !rec?.meta?.name) return false;
-
-    setFileStatus('call', 'Loaded previous session');
-    setStatus(`Auto-loading saved call data: ${rec.meta.name} (starting Pyodide)…`);
-    logDebug(`Auto-loading saved call data: ${rec.meta.name}`);
-
-    await ensurePyodideAvailable();
-    const buf = await rec.blob.arrayBuffer();
-    const bytes = new Uint8Array(buf);
-
-    const fakeFile = {
-      name: rec.meta.name,
-      size: rec.meta.size,
-      lastModified: rec.meta.lastModified,
-      type: rec.meta.type,
-    };
-
-    await loadCallDatasetFromBytes({ bytes, fileInfo: fakeFile, saveToIdb: false });
-    return true;
-  } catch (e) {
-    logDebug(`Auto-load (call data) failed: ${e?.message ?? String(e)}`);
-    setFileStatus('call', 'No file chosen');
-    return false;
-  }
-}
-
-// Attempt auto-load after module init.
-(async () => {
-  await refreshLastDatasetInfo();
-  await tryAutoLoadSavedDataset();
-  await tryAutoLoadSavedCallDataset();
-})();
 
 // File input events
 if (!els.fileInput) {
