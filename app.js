@@ -4,8 +4,6 @@ import { buildPivot, renderPivotGrid } from './pivot.js?v=31';
 const els = {
   fileInput: document.getElementById('fileInput'),
   callFileInput: document.getElementById('callFileInput'),
-  fileInputStatus: document.getElementById('fileInputStatus'),
-  callFileInputStatus: document.getElementById('callFileInputStatus'),
   statusText: document.getElementById('statusText'),
   columnsPreview: document.getElementById('columnsPreview'),
   gridContainer: document.getElementById('gridContainer'),
@@ -36,12 +34,6 @@ const els = {
   applyBuildingText: document.getElementById('applyBuildingText'),
   clearBuildingText: document.getElementById('clearBuildingText'),
 };
-
-function setFileStatus(kind, text) {
-  const el = kind === 'call' ? els.callFileInputStatus : els.fileInputStatus;
-  if (!el) return;
-  el.textContent = text || 'No file chosen';
-}
 
 const state = {
   columns: [],
@@ -420,7 +412,7 @@ function logDebug(message) {
 }
 
 // Visible startup confirmation (helps diagnose caching / module-load issues).
-setStatus('Ready. Choose .pkl file(s) to begin.');
+setStatus('Ready. Load a Dataset (.pkl) to begin. Call data is optional.');
 logDebug('app.js initialized.');
 
 // No previous-session restore: clear any legacy saved blobs and hide the info rows.
@@ -600,7 +592,11 @@ function buildFiltersSummaryAoA() {
   lines.push(['Path ID', setToText(state.filters.path_id)]);
   lines.push(['Point ID', setToText(state.filters.point_id)]);
   lines.push(['Section', setToText(state.filters.row_type)]);
-  lines.push(['Location Source', setToText(state.filters.location_source)]);
+
+  // Location Source is call-data-only; keep it out of the archive export unless call data is loaded.
+  if (callState.records.length && callState.dimCols?.location_source) {
+    lines.push(['Location Source', setToText(state.filters.location_source)]);
+  }
 
   if (state.idBySection && state.idBySection.size) {
     lines.push([]);
@@ -634,7 +630,10 @@ function buildCallFiltersSummaryAoA() {
   lines.push(['Stage', setToText(state.filters.stage)]);
   lines.push(['Path ID', setToText(state.filters.path_id)]);
   lines.push(['Point ID', setToText(state.filters.point_id)]);
-  lines.push(['Location Source', setToText(state.filters.location_source)]);
+
+  if (callState.dimCols?.location_source) {
+    lines.push(['Location Source', setToText(state.filters.location_source)]);
+  }
 
   return lines;
 }
@@ -1296,7 +1295,7 @@ function autosizeSelectToWidestOption(selectEl) {
 function enableControls(enabled) {
   if (els.clearFilters) els.clearFilters.disabled = !enabled;
 
-  const hasBuilding = Boolean(state.dimCols.building);
+  const hasBuilding = Boolean(state.dimCols.building) || Boolean(callState.dimCols?.building);
   const buildingEnabled = enabled && hasBuilding;
 
   if (els.buildingSelect) els.buildingSelect.disabled = !buildingEnabled;
@@ -1308,24 +1307,28 @@ function enableControls(enabled) {
 }
 
 function updateSectionsVisibility() {
-  const hasData = state.records.length > 0;
-  const needsBuilding = Boolean(state.dimCols.building);
-  const hasSelectedBuilding = state.filters.building && state.filters.building.size > 0;
-  const show = hasData && (!needsBuilding || hasSelectedBuilding);
+  const hasArchive = state.records.length > 0;
+  const hasCalls = callState.records.length > 0;
+  const hasAnyData = hasArchive || hasCalls;
 
-  const callHasData = callState.records.length > 0;
-  const callNeedsBuilding = Boolean(callState.dimCols.building);
-  const showCalls = callHasData && (!callNeedsBuilding || hasSelectedBuilding);
+  const needsBuildingArchive = Boolean(state.dimCols.building);
+  const needsBuildingCalls = Boolean(callState.dimCols.building);
+  const needsBuildingAny = needsBuildingArchive || needsBuildingCalls;
+  const hasSelectedBuilding = state.filters.building && state.filters.building.size > 0;
+  const showFilters = hasAnyData && (!needsBuildingAny || hasSelectedBuilding);
+  const showGrid = hasArchive && (!needsBuildingArchive || hasSelectedBuilding);
+  const showCalls = hasCalls && (!needsBuildingCalls || hasSelectedBuilding);
+  const showDebug = showFilters;
 
   const toggle = (el, on) => {
     if (!el) return;
     el.classList.toggle('hidden', !on);
   };
 
-  toggle(els.filtersDetails, show);
-  toggle(els.gridCard, show);
+  toggle(els.filtersDetails, showFilters);
+  toggle(els.gridCard, showGrid);
   toggle(els.callCard, showCalls);
-  toggle(els.debugSection, show);
+  toggle(els.debugSection, showDebug);
 }
 
 // Initial visibility (no data yet).
@@ -1343,7 +1346,7 @@ function populateBuildingSelectOptions() {
   if (!els.buildingSelect) return;
   els.buildingSelect.innerHTML = '';
 
-  if (!state.dimCols.building) return;
+  if (!state.knownBuildings || state.knownBuildings.length === 0) return;
 
   for (const v of state.knownBuildings) {
     const opt = document.createElement('option');
@@ -1352,6 +1355,24 @@ function populateBuildingSelectOptions() {
     if (state.filters.building.has(v)) opt.selected = true;
     els.buildingSelect.appendChild(opt);
   }
+}
+
+function recomputeKnownBuildings() {
+  const valsA = (state.records.length && state.dimCols.building)
+    ? uniqSortedValues(state.records, state.dimCols.building, 20000)
+    : [];
+
+  const valsC = (callState.records.length && callState.dimCols?.building)
+    ? uniqSortedValues(callState.records, callState.dimCols.building, 20000)
+    : [];
+
+  const s = new Set();
+  for (const v of valsA) s.add(v);
+  for (const v of valsC) s.add(v);
+
+  state.knownBuildings = Array.from(s).sort((a, b) => String(a).localeCompare(String(b)));
+  state.knownBuildingsLowerMap = new Map();
+  for (const v of state.knownBuildings) state.knownBuildingsLowerMap.set(String(v).toLowerCase(), v);
 }
 
 function parseCommaList(text) {
@@ -2008,8 +2029,6 @@ async function onFileSelected(file) {
   setStatus('Reading file…');
   logDebug(`File selected: ${file?.name ?? '(unknown)'} (${file?.size ?? 0} bytes)`);
 
-  if (file?.name) setFileStatus('archive', file.name);
-
   try {
     const buf = await file.arrayBuffer();
     const bytes = new Uint8Array(buf);
@@ -2034,13 +2053,9 @@ async function onFileSelected(file) {
     };
 
     // Cache known building values for case-insensitive mapping (manual input).
-    state.knownBuildings = [];
-    state.knownBuildingsLowerMap = new Map();
-    if (state.dimCols.building) {
-      const vals = uniqSortedValues(state.records, state.dimCols.building, 20000);
-      state.knownBuildings = vals;
-      for (const v of vals) state.knownBuildingsLowerMap.set(String(v).toLowerCase(), v);
-    }
+    // Source from whichever dataset(s) are loaded (archive and/or call).
+    recomputeKnownBuildings();
+    logDebug(`Detected building columns: archive=${state.dimCols.building ?? '(none)'}, call=${callState.dimCols.building ?? '(none)'}; buildings=${state.knownBuildings.length}`);
 
     // Reset filters on new load.
     for (const k of Object.keys(state.filters)) state.filters[k].clear();
@@ -2163,6 +2178,11 @@ async function loadCallDatasetFromBytes({ bytes, fileInfo, saveToIdb = false, id
     callState.filteredRecords = records;
     callState.lastFileInfo = fileInfo;
 
+    // Ensure Building picker can populate from call data even if archive isn't loaded.
+    recomputeKnownBuildings();
+    populateBuildingSelectOptions();
+    syncBuildingSelectFromState();
+
     renderCallSummary();
     renderCallTable();
     setCallsExportEnabled(callState.filteredRecords.length > 0);
@@ -2202,8 +2222,6 @@ async function onCallFileSelected(file) {
   if (!file) return;
   setStatus('Reading call data file…');
   logDebug(`Call file selected: ${file?.name ?? '(unknown)'} (${file?.size ?? 0} bytes)`);
-
-  if (file?.name) setFileStatus('call', file.name);
 
   const buf = await file.arrayBuffer();
   const bytes = new Uint8Array(buf);

@@ -31,13 +31,13 @@ body {
   gap: 10px;
 }
 
-/* Hide the browser-provided filename text (e.g. "No file chosen"). We'll render our own status label. */
-input[type="file"] {
-  color: transparent;
+/* Keep the Choose File button readable across browsers. */
+.file-row input[type="file"]::file-selector-button {
+  color: var(--text);
 }
 
-input[type="file"]::file-selector-button {
-  color: inherit;
+.file-row input[type="file"]::-webkit-file-upload-button {
+  color: var(--text);
 }
 
 .grid-scroll {
