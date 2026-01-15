@@ -985,6 +985,7 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
 
   const buildingCol = c.building;
   const participantCol = c.participant;
+  const locationSourceCol = c.location_source;
 
   const makeNode = () => ({ count: 0, items: [], children: new Map() });
   const root = makeNode();
@@ -1000,11 +1001,30 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
 
     // Grouping strategy:
     // - Default: by Building (previous behavior)
-    // - If groupByParticipant: Participant -> Building (if available)
+    // - If groupByParticipant:
+    //     Participant -> Location Source (if available) -> Building (if available)
+    //     Otherwise Participant -> Building (if available)
     if (groupByParticipant && participantCol) {
       const p = toKey(r?.[participantCol]) || '(blank)';
       const pNode = getOrCreateChild(root, p);
       pNode.count++;
+
+      if (locationSourceCol) {
+        const ls = toKey(r?.[locationSourceCol]) || '(blank)';
+        const lsNode = getOrCreateChild(pNode, ls);
+        lsNode.count++;
+
+        if (buildingCol) {
+          const b = toKey(r?.[buildingCol]) || '(blank)';
+          const bNode = getOrCreateChild(lsNode, b);
+          bNode.count++;
+          bNode.items.push(placemarkXml);
+          return;
+        }
+
+        lsNode.items.push(placemarkXml);
+        return;
+      }
 
       if (buildingCol) {
         const b = toKey(r?.[buildingCol]) || '(blank)';
