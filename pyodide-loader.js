@@ -95,8 +95,19 @@ records_json = df.to_json(orient='records')
 
   try {
     const resultProxy = await pyodide.runPythonAsync(code);
-    const result = resultProxy.toJs({ create_proxies: false });
+    let result = resultProxy.toJs({ create_proxies: false });
     resultProxy.destroy();
+
+    // Pyodide converts Python dicts to JS Maps by default.
+    // Our callers expect a plain object with { columns, records }.
+    if (result instanceof Map) result = Object.fromEntries(result);
+    if (!result || typeof result !== 'object') {
+      throw new Error('Unpickle conversion failed: unexpected result type');
+    }
+    if (!Array.isArray(result.columns) || !Array.isArray(result.records)) {
+      throw new Error('Unpickle conversion failed: missing columns/records arrays');
+    }
+
     return result;
   } finally {
     // Clean up globals to reduce memory pressure.
