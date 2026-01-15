@@ -1161,7 +1161,20 @@ function exportCurrentPivotToExcel() {
 function guessDimensionColumns(columns) {
   return {
     stage: detectColumn(columns, ['stage', 'stg', 'phase']),
-    building: detectColumn(columns, ['building_id', 'building', 'bldg', 'site', 'location']),
+    building: detectColumn(columns, [
+      'building_id',
+      'building id',
+      'buildingid',
+      'building',
+      'bldg_id',
+      'bldg id',
+      'bldgid',
+      'bldg',
+      'site_id',
+      'site id',
+      'site',
+      'location',
+    ]),
     participant: detectColumn(columns, ['participant', 'carrier', 'name', 'user', 'person']),
     path_id: detectColumn(columns, ['path_id', 'path id', 'path', 'pathid']),
     point_id: detectColumn(columns, ['point_id', 'point id', 'point', 'pointid']),
@@ -1175,7 +1188,20 @@ function guessCallDimensionColumns(columns) {
   return {
     participant: detectColumn(columns, ['participant', 'carrier', 'name', 'user', 'person']),
     stage: detectColumn(columns, ['stage', 'stg', 'phase']),
-    building: detectColumn(columns, ['building_id', 'building', 'bldg', 'site', 'location']),
+    building: detectColumn(columns, [
+      'building_id',
+      'building id',
+      'buildingid',
+      'building',
+      'bldg_id',
+      'bldg id',
+      'bldgid',
+      'bldg',
+      'site_id',
+      'site id',
+      'site',
+      'location',
+    ]),
     path_id: detectColumn(columns, ['path_id', 'path id', 'path', 'pathid']),
     point_id: detectColumn(columns, ['point_id', 'point id', 'point', 'pointid']),
     location_source: detectColumn(columns, ['location_source', 'location source', 'loc source', 'source']),
@@ -1318,7 +1344,7 @@ function updateSectionsVisibility() {
   const showFilters = hasAnyData && (!needsBuildingAny || hasSelectedBuilding);
   const showGrid = hasArchive && (!needsBuildingArchive || hasSelectedBuilding);
   const showCalls = hasCalls && (!needsBuildingCalls || hasSelectedBuilding);
-  const showDebug = showFilters;
+  const showDebug = hasAnyData;
 
   const toggle = (el, on) => {
     if (!el) return;
