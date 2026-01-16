@@ -1256,12 +1256,22 @@ function exportCurrentPivotToExcel() {
     })
     : pivot.rows;
 
+  // Track previous values for each left column to blank repeats
+  const prevVals = new Array(leftCols.length).fill(undefined);
   for (const rowId of exportRowIds) {
     const meta = pivot.rowMeta?.get(rowId) ?? {};
     const row = [];
-    for (const c of leftCols) {
+    for (let i = 0; i < leftCols.length; i++) {
+      const c = leftCols[i];
       const v = meta?.[c.key];
-      row.push(v === null || v === undefined ? '' : String(v));
+      const valStr = v === null || v === undefined ? '' : String(v);
+      // Only show value if different from previous row
+      if (valStr === prevVals[i]) {
+        row.push('');
+      } else {
+        row.push(valStr);
+        prevVals[i] = valStr;
+      }
     }
     const rowMap = pivot.matrix?.get(rowId);
     for (const s of stages) {
