@@ -70,7 +70,7 @@
     <section class="status" aria-live="polite">
       <div id="statusText" class="status-text">Upload a .pkl file to begin.</div>
 
-      <details id="filtersDetails" class="status-details">
+      <details id="filtersDetails" class="status-details hidden">
         <summary>Filters</summary>
         <div id="filtersHint" class="muted" style="margin-top: 8px;">Load a file to enable filters.</div>
         <div id="filtersContainer" class="filters"></div>
@@ -81,7 +81,7 @@
       </details>
     </section>
 
-    <section id="gridCard" class="grid-card">
+    <section id="gridCard" class="grid-card hidden">
       <div class="grid-toolbar">
         <div class="muted" id="gridSummary">No data loaded.</div>
         <div class="grid-tools">
@@ -103,7 +103,7 @@
       </div>
     </section>
 
-    <section id="callCard" class="grid-card">
+    <section id="callCard" class="grid-card hidden">
       <div class="grid-toolbar">
         <div class="muted" id="callSummary">No call data loaded.</div>
         <div class="grid-tools">
@@ -118,7 +118,7 @@
       </div>
     </section>
 
-    <section id="debugSection" class="status">
+    <section id="debugSection" class="status hidden">
       <details class="status-details">
         <summary>Detected columns</summary>
         <pre id="columnsPreview" class="pre"></pre>
