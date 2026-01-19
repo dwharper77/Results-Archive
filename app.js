@@ -1,3 +1,5 @@
+import { unpickleDataFrameToRecords } from './pyodide-loader.js?v=33';
+import { buildPivot, renderPivotGrid } from './pivot.js?v=31';
 // --- Egnyte Modal Integration ---
 const egnyteLinks = [
   { Link: 'https://furtherllc.egnyte.com/fl/xBTGxYRC8MMK', Stage: '24A', Participant: 'AT&T' },
@@ -39,7 +41,6 @@ function getSelectedEgnyteLinks() {
     (stages.length === 0 || stages.includes(l.Stage)) &&
     (participants.length === 0 || participants.includes(l.Participant))
   );
-}
 
 function showEgnyteModal() {
   const modal = document.getElementById('egnyteModal');
@@ -50,13 +51,13 @@ function showEgnyteModal() {
     content.innerHTML = '<div style="margin:1em 0;">No Egnyte folder links for current selection.</div>';
     return;
   }
+
   content.innerHTML = links.map(l =>
     `<div class="egnyte-link-row">
       <div class="egnyte-link-label"><span class="egnyte-stage">Stage: ${l.Stage}</span> <span class="egnyte-participant">Participant: ${l.Participant}</span></div>
       <button class="btn btn-small egnyte-open-btn" onclick="window.open('${l.Link}','_blank')">Open Folder</button>
     </div>`
   ).join('');
-}
 
 function attachEgnyteBtnListener() {
   const egnyteBtn = document.getElementById('egnyteBtn');
@@ -101,9 +102,7 @@ window.addEventListener('DOMContentLoaded', () => {
   attachEgnyteBtnListener();
 });
 
-// If you have a function that re-renders filters, call attachEgnyteBtnListener() after rendering filters.
-import { unpickleDataFrameToRecords } from './pyodide-loader.js?v=33';
-import { buildPivot, renderPivotGrid } from './pivot.js?v=31';
+
 
 const els = {
   fileInput: document.getElementById('fileInput'),
@@ -1366,57 +1365,72 @@ function exportCurrentPivotToExcel() {
     const meta = pivot.rowMeta?.get(rowId) ?? {};
     const row = [];
     for (let i = 0; i < leftCols.length; i++) {
-      const c = leftCols[i];
-      const v = meta?.[c.key];
-      const valStr = v === null || v === undefined ? '' : String(v);
-      // Only show value if different from previous row
-      if (valStr === prevVals[i]) {
-        row.push('');
-      } else {
-        row.push(valStr);
-        prevVals[i] = valStr;
-      }
-    }
-    const rowMap = pivot.matrix?.get(rowId);
-    for (const s of stages) {
-      const raw = rowMap ? rowMap.get(String(s)) : undefined;
+      for (const sec of sections) {
+        const sectionOnly = buildingScopedArchive.filter((r) => toKey(r?.[sectionCol]) === sec);
+        const scoped = otherActive.length ? filterRecordsWithActive(sectionOnly, otherActive) : sectionOnly;
+        let values = [];
+        let allowedKeys = new Set();
+
+        // Compose label as Stage — Participant — ID (if available)
+        for (const r of scoped) {
+          const idVal = toKey(r?.[idCol]);
+          if (!idVal) continue;
+          const stageVal = toKey(r?.[state.dimCols.stage]);
+          const participantVal = participantCol ? toKey(r?.[participantCol]) : undefined;
+          let label = idVal;
+          if (stageVal && participantVal) {
+            label = `${stageVal} — ${participantVal} — ${idVal}`;
+          } else if (stageVal) {
+            label = `${stageVal} — ${idVal}`;
+          } else if (participantVal) {
+            label = `${participantVal} — ${idVal}`;
+          }
+          values.push(label);
+          allowedKeys.add(label);
+        }
+
+        // Remove any values not in allowedKeys from the filter set
+        const set = state.idBySection.get(sec) ?? new Set();
+        for (const v of Array.from(set)) {
+          if (!allowedKeys.has(v)) set.delete(v);
+        }
+
+        // Button for this identifier filter
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'filter-btn';
+
+        const name = document.createElement('span');
+        name.className = 'filter-name';
+        name.textContent = `Identifier — ${sec}`;
+
+        const badge = document.createElement('span');
+        badge.className = 'filter-badge';
+        badge.textContent = selectionSummary(set.size, values.length);
+
+        btn.appendChild(name);
+        btn.appendChild(badge);
+
+        btn.addEventListener('click', () => {
+          openMultiSelectPicker({
+            title: `Identifier — ${sec}`,
+            values,
+            selectedSet: set,
+            onApply: (nextSet) => {
+              set.clear();
+              for (const v of nextSet) set.add(v);
+              applyFilters();
+              buildFiltersUI();
+              render();
+            },
+          });
+        });
+
+        els.filtersContainer.appendChild(btn);
       for (const m of metricKeys) {
-        const v = raw && typeof raw === 'object' ? raw[m] : undefined;
-        const num = typeof v === 'number' ? v : Number(v);
-        row.push(Number.isFinite(num) ? num : '');
       }
     }
-    aoa.push(row);
   }
-
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
-
-  const lastRow = aoa.length - 1;
-
-  // Merges: title + generated lines, vertical merges for left headers, and stage group merges.
-  ws['!merges'] = ws['!merges'] || [];
-  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: lastCol } });
-  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } });
-
-  const HEADER_TOP_ROW = 3;
-  const HEADER_SUB_ROW = 4;
-  const DATA_START_ROW = 5;
-
-  // Merge each left header cell down across the two header rows.
-  for (let c = 0; c < leftCount; c++) {
-    ws['!merges'].push({ s: { r: HEADER_TOP_ROW, c }, e: { r: HEADER_SUB_ROW, c } });
-  }
-
-  // Merge stage group headers across their metric columns in the top header row.
-  for (let i = 0; i < stages.length; i++) {
-    const start = leftCount + i * metricCount;
-    const end = start + metricCount - 1;
-    if (end > start) ws['!merges'].push({ s: { r: HEADER_TOP_ROW, c: start }, e: { r: HEADER_TOP_ROW, c: end } });
-  }
-
-  // Freeze panes so the row with the 80%s stays frozen.
-  // Freezing at HEADER_SUB_ROW + 1 freezes title + generated + spacer + both header rows.
-  const ySplit = HEADER_SUB_ROW + 1;
   const topLeftCell = XLSX.utils.encode_cell({ r: ySplit, c: leftCount });
   ws['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: leftCount, ySplit, topLeftCell, activePane: 'bottomRight' } }];
 
@@ -2870,5 +2884,5 @@ if (els.callFileInput) {
 }
 
 if (els.clearFilters) {
-  els.clearFilters.addEventListener('click', () => clearAllFilters());
-}
+  els.clearFilters.addEventListener('click', () => clearAllFilters());}
+}}}
