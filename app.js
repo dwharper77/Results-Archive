@@ -1,3 +1,4 @@
+// Ensure all imports use correct relative paths
 import { unpickleDataFrameToRecords } from './pyodide-loader.js';
 import { buildPivot, renderPivotGrid } from './pivot.js';
 // --- Egnyte Modal Integration ---
@@ -41,6 +42,7 @@ function getSelectedEgnyteLinks() {
     (stages.length === 0 || stages.includes(l.Stage)) &&
     (participants.length === 0 || participants.includes(l.Participant))
   );
+}
 
 function showEgnyteModal() {
   const modal = document.getElementById('egnyteModal');
@@ -58,6 +60,7 @@ function showEgnyteModal() {
       <button class="btn btn-small egnyte-open-btn" onclick="window.open('${l.Link}','_blank')">Open Folder</button>
     </div>`
   ).join('');
+}
 
 function attachEgnyteBtnListener() {
   const egnyteBtn = document.getElementById('egnyteBtn');
@@ -1682,7 +1685,7 @@ function filterRecordsWithActiveByDim(records, activeEntries, dimCols) {
     for (const [logicalKey, selected] of activeEntries) {
       const col = dimCols?.[logicalKey];
       if (!col) continue;
-      const value = toKey(r?.[col]);
+                const value = toKey(r?.[col]);
       if (!selected.has(value)) return false;
     }
     return true;
@@ -2889,8 +2892,4 @@ if (els.callFileInput) {
     logDebug('callFileInput change event fired.');
     onCallFileSelected(file);
   });
-}
-
-if (els.clearFilters) {
-  els.clearFilters.addEventListener('click', () => clearAllFilters());}
-}}}
+}}
