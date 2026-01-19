@@ -2863,21 +2863,37 @@ if (!els.fileInput) {
   setStatus('App initialization failed: file input not found in DOM.', { error: true });
   logDebug('Fatal: #fileInput not found.');
 } else {
-  els.fileInput.addEventListener('click', () => {
-    logDebug('fileInput clicked, clearing value');
-    els.fileInput.value = '';
-  });
+  // Confirm listener attachment
+  console.log('[app] attaching fileInput listeners, element=', els.fileInput);
+  if (els.fileInput) {
+    els.fileInput.addEventListener('click', () => {
+      console.log('[app] fileInput clicked');
+      if (els.debugLog) els.debugLog.textContent += `\n[app] fileInput clicked`;
+      try { els.fileInput.value = ''; } catch (e) { console.warn(e); }
+    });
 
-  els.fileInput.addEventListener('change', () => {
-    logDebug('fileInput change event fired.');
-    const file = els.fileInput.files?.[0];
-    if (!file) {
-      logDebug('No file selected in fileInput change event.');
-      return;
-    }
-    logDebug(`fileInput selected file: name=${file.name}, size=${file.size}, type=${file.type}`);
-    onFileSelected(file);
-  });
+    const fileChangeHandler = (ev) => {
+      try {
+        console.log('[app] fileInput change/input event fired', ev);
+        if (els.debugLog) els.debugLog.textContent += `\n[app] fileInput change/input event fired`;
+        const file = els.fileInput.files?.[0];
+        if (!file) {
+          console.log('[app] No file selected in fileInput change event.');
+          if (els.debugLog) els.debugLog.textContent += `\n[app] No file selected in fileInput change event.`;
+          return;
+        }
+        console.log('[app] file selected:', file.name, file.size, file.type);
+        if (els.debugLog) els.debugLog.textContent += `\n[app] file selected: ${file.name} (${file.size} bytes)`;
+        onFileSelected(file);
+      } catch (err) {
+        console.error('[app] error in fileChangeHandler', err);
+        if (els.debugLog) els.debugLog.textContent += `\n[app] error in fileChangeHandler: ${err?.message ?? err}`;
+      }
+    };
+
+    els.fileInput.addEventListener('change', fileChangeHandler);
+    els.fileInput.addEventListener('input', fileChangeHandler);
+  }
 }
 
 // Call-data file input events
@@ -2886,10 +2902,19 @@ if (els.callFileInput) {
     els.callFileInput.value = '';
   });
 
-  els.callFileInput.addEventListener('change', () => {
+  els.callFileInput.addEventListener('change', (ev) => {
+    console.log('[app] callFileInput change event fired', ev);
+    if (els.debugLog) els.debugLog.textContent += `\n[app] callFileInput change event fired`;
     const file = els.callFileInput.files?.[0];
-    if (!file) return;
-    logDebug('callFileInput change event fired.');
-    onCallFileSelected(file);
+    if (!file) {
+      console.log('[app] no call file selected');
+      return;
+    }
+    try {
+      onCallFileSelected(file);
+    } catch (err) {
+      console.error('[app] error in onCallFileSelected', err);
+      if (els.debugLog) els.debugLog.textContent += `\n[app] error in onCallFileSelected: ${err?.message ?? err}`;
+    }
   });
 }}
