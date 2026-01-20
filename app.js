@@ -1398,72 +1398,25 @@ function exportCurrentPivotToExcel() {
   for (const rowId of exportRowIds) {
     const meta = pivot.rowMeta?.get(rowId) ?? {};
     const row = [];
+    // Fill left columns, blanking repeats
     for (let i = 0; i < leftCols.length; i++) {
-      for (const sec of sections) {
-        const sectionOnly = buildingScopedArchive.filter((r) => toKey(r?.[sectionCol]) === sec);
-        const scoped = otherActive.length ? filterRecordsWithActive(sectionOnly, otherActive) : sectionOnly;
-        let values = [];
-        let allowedKeys = new Set();
-
-        // Compose label as Stage — Participant — ID (if available)
-        for (const r of scoped) {
-          const idVal = toKey(r?.[idCol]);
-          if (!idVal) continue;
-          const stageVal = toKey(r?.[state.dimCols.stage]);
-          const participantVal = participantCol ? toKey(r?.[participantCol]) : undefined;
-          let label = idVal;
-          if (stageVal && participantVal) {
-            label = `${stageVal} — ${participantVal} — ${idVal}`;
-          } else if (stageVal) {
-            label = `${stageVal} — ${idVal}`;
-          } else if (participantVal) {
-            label = `${participantVal} — ${idVal}`;
-          }
-          values.push(label);
-          allowedKeys.add(label);
-        }
-
-        // Remove any values not in allowedKeys from the filter set
-        const set = state.idBySection.get(sec) ?? new Set();
-        for (const v of Array.from(set)) {
-          if (!allowedKeys.has(v)) set.delete(v);
-        }
-
-        // Button for this identifier filter
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'filter-btn';
-
-        const name = document.createElement('span');
-        name.className = 'filter-name';
-        name.textContent = `Identifier — ${sec}`;
-
-        const badge = document.createElement('span');
-        badge.className = 'filter-badge';
-        badge.textContent = selectionSummary(set.size, values.length);
-
-        btn.appendChild(name);
-        btn.appendChild(badge);
-
-        btn.addEventListener('click', () => {
-          openMultiSelectPicker({
-            title: `Identifier — ${sec}`,
-            values,
-            selectedSet: set,
-            onApply: (nextSet) => {
-              set.clear();
-              for (const v of nextSet) set.add(v);
-              applyFilters();
-              buildFiltersUI();
-              render();
-            },
-          });
-        });
-
-        els.filtersContainer.appendChild(btn);
-      for (const m of metricKeys) {
+      const key = leftCols[i].key;
+      const val = meta[key];
+      if (prevVals[i] === val) {
+        row.push('');
+      } else {
+        row.push(val);
+        prevVals[i] = val;
       }
     }
+    // Fill metric columns for each stage
+    for (let s = 0; s < stages.length; s++) {
+      for (let m = 0; m < metricKeys.length; m++) {
+        const v = pivot.values?.[rowId]?.[stages[s]]?.[metricKeys[m]];
+        row.push(v === undefined ? '' : v);
+      }
+    }
+    aoa.push(row);
   }
   const topLeftCell = XLSX.utils.encode_cell({ r: ySplit, c: leftCount });
   ws['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: leftCount, ySplit, topLeftCell, activePane: 'bottomRight' } }];
@@ -2971,5 +2924,4 @@ if (els.callFileInput) {
       console.error('[app] error in onCallFileSelected', err);
       if (els.debugLog) els.debugLog.textContent += `\n[app] error in onCallFileSelected: ${err?.message ?? err}`;
     }
-  });
-}}
+  });}
