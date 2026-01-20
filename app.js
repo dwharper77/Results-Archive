@@ -1335,17 +1335,17 @@ async function exportCallsToKml() {
 }
 
 function exportCurrentPivotToExcel() {
-      const STYLE_LEFTCOLS = {
-        font: { name: 'Calibri', sz: 11, color: { rgb: 'FF1CA45C' } },
-        alignment: { horizontal: 'left', vertical: 'top' },
-        border: BORDER_THIN,
-      };
     // --- Styles (define at top for global use in function) ---
     const BORDER_THIN = {
       top: { style: 'thin', color: { rgb: 'FF000000' } },
       bottom: { style: 'thin', color: { rgb: 'FF000000' } },
       left: { style: 'thin', color: { rgb: 'FF000000' } },
       right: { style: 'thin', color: { rgb: 'FF000000' } },
+    };
+    const STYLE_LEFTCOLS = {
+      font: { name: 'Calibri', sz: 11, color: { rgb: 'FF1CA45C' } },
+      alignment: { horizontal: 'left', vertical: 'top' },
+      border: BORDER_THIN,
     };
     const STYLE_HEADER = {
       font: { bold: true, color: { rgb: 'FFFFFFFF' } },
