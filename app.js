@@ -1380,7 +1380,7 @@ function exportCurrentPivotToExcel() {
 
   const aoa = [titleRow, generatedRow, spacerRow, headerTop, headerSub];
   const HEADER_TOP_ROW = 3, HEADER_SUB_ROW = 4, DATA_START_ROW = 5;
-  const lastRow = aoa.length - 1;
+  
 
   const exportRowIds = state.dimCols.row_type
     ? sortRowIdsByRowKeys(pivot.rows, pivot, {
@@ -1415,6 +1415,9 @@ function exportCurrentPivotToExcel() {
     }
     aoa.push(row);
   }
+
+  const lastRow = aoa.length - 1;
+    
   const ySplit = 5;
     const ws = XLSX.utils.aoa_to_sheet(aoa);
   const topLeftCell = XLSX.utils.encode_cell({ r: ySplit, c: leftCount });
