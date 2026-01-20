@@ -1565,7 +1565,8 @@ function exportCurrentPivotToExcel() {
       return String(a.section).localeCompare(String(b.section));
     });
 
-    // (Declarations moved above, remove duplicate)
+    let prevParticipant = null;
+    let prevSection = null;
     for (const { rowId, participant, section, meta } of buildingRows) {
       // Insert header and blank row for new participant
       if (prevParticipant !== null && participant !== prevParticipant) {
