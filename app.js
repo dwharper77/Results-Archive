@@ -1,3 +1,4 @@
+window.exportCurrentPivotToExcel = exportCurrentPivotToExcel;
 // Ensure all imports use correct relative paths
 window.addEventListener('error', function(event) {
   console.error('[GLOBAL ERROR HANDLER]', event.message, event.filename, event.lineno, event.colno, event.error);
