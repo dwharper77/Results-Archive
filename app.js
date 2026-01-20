@@ -1335,6 +1335,11 @@ async function exportCallsToKml() {
 }
 
 function exportCurrentPivotToExcel() {
+      const STYLE_LEFTCOLS = {
+        font: { name: 'Calibri', sz: 11, color: { rgb: 'FF1CA45C' } },
+        alignment: { horizontal: 'left', vertical: 'top' },
+        border: BORDER_THIN,
+      };
     // --- Styles (define at top for global use in function) ---
     const BORDER_THIN = {
       top: { style: 'thin', color: { rgb: 'FF000000' } },
@@ -1354,16 +1359,7 @@ function exportCurrentPivotToExcel() {
       alignment: { horizontal: 'center', vertical: 'center' },
       border: BORDER_THIN,
     };
-    const STYLE_DATA_TEXT = {
-      alignment: { horizontal: 'left', vertical: 'top' },
-      border: BORDER_THIN,
-    };
     const STYLE_DATA_NUM = {
-      alignment: { horizontal: 'right', vertical: 'top' },
-      border: BORDER_THIN,
-      numFmt: '0.00',
-    };
-    const STYLE_STAGE_RED = {
       font: { color: { rgb: 'FFC00000' } },
       alignment: { horizontal: 'right', vertical: 'top' },
       border: BORDER_THIN,
@@ -1524,34 +1520,7 @@ function exportCurrentPivotToExcel() {
   const GRAY = 'FFD9D9D9';
   const SUMMARY_GRAY = 'FFF2F2F2';
   // Styles
-  const STYLE_HDR = {
-    font: { bold: true, color: { rgb: 'FFFFFFFF' } },
-    fill: { patternType: 'solid', fgColor: { rgb: HEADER_FILL } },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-    border: BORDER_THIN,
-  };
-  const STYLE_HDR_GREEN = {
-    font: { bold: true, color: { rgb: GREEN } },
-    fill: { patternType: 'solid', fgColor: { rgb: GRAY } },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-    border: BORDER_THIN,
-  };
-  const STYLE_HDR_ORANGE = {
-    font: { bold: true, color: { rgb: 'FFFFFFFF' } },
-    fill: { patternType: 'solid', fgColor: { rgb: ORANGE } },
-    alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-    border: BORDER_THIN,
-  };
-  const STYLE_TITLE = {
-    font: { bold: true, sz: 18, color: { rgb: 'FF000000' } },
-    alignment: { horizontal: 'left', vertical: 'center' },
-  };
-  const STYLE_GENERATED = {
-    font: { italic: true, sz: 10, color: { rgb: 'FF333333' } },
-    fill: { patternType: 'solid', fgColor: { rgb: GRAY } },
-    alignment: { horizontal: 'center', vertical: 'center' },
-    border: BORDER_THIN,
-  };
+  // ...existing code...
   const STYLE_TEXT = {
     font: { color: { rgb: GREEN } },
     alignment: { horizontal: 'left', vertical: 'top' },
@@ -1613,15 +1582,20 @@ function exportCurrentPivotToExcel() {
     applyStyle(HEADER_SUB_ROW, c, STYLE_HDR);
   }
   // Data styles
+  const STYLE_IDENTIFIER = {
+    font: { name: 'Calibri', sz: 10, color: { rgb: 'FF000000' } },
+    alignment: { horizontal: 'left', vertical: 'top' },
+    border: BORDER_THIN,
+  };
   for (let r = DATA_START_ROW; r <= lastRow; r++) {
     for (let c = 0; c <= lastCol; c++) {
-      const isMetric = c >= leftCount;
-      // Red font for Stage 1d and Za columns
-      const stageIdx = isMetric ? Math.floor((c - leftCount) / metricCount) : -1;
-      const stageName = isMetric && stages[stageIdx] ? String(stages[stageIdx]).toLowerCase() : '';
-      if (isMetric && (stageName.includes('1d') || stageName.includes('za'))) {
-        applyStyle(r, c, STYLE_STAGE_RED);
+      // Columns A-D (0-3), not header
+      if (c >= 0 && c <= 3 && r !== HEADER_TOP_ROW && r !== HEADER_SUB_ROW) {
+        applyStyle(r, c, STYLE_LEFTCOLS);
+      } else if (c === 4 && r !== HEADER_TOP_ROW && r !== HEADER_SUB_ROW) {
+        applyStyle(r, c, STYLE_IDENTIFIER);
       } else {
+        const isMetric = c >= leftCount;
         applyStyle(r, c, isMetric ? STYLE_NUM : STYLE_TEXT);
       }
     }
