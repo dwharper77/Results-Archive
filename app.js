@@ -1696,7 +1696,6 @@ function exportCurrentPivotToExcel() {
     setStatus(`Excel export failed: ${err?.message ?? String(err)}`, { error: true });
   }
 
-  }
 // Ensure exportCurrentPivotToExcel is globally accessible for button event handlers
 window.exportCurrentPivotToExcel = exportCurrentPivotToExcel;
 
@@ -3092,4 +3091,4 @@ if (els.callFileInput) {
       console.error('[app] error in onCallFileSelected', err);
       if (els.debugLog) els.debugLog.textContent += `\n[app] error in onCallFileSelected: ${err?.message ?? err}`;
     }
-  });}
+  });}}
