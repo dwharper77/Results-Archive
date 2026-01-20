@@ -563,9 +563,7 @@ try {
 }
 */
 console.log('REACHED 8: AFTER_STORAGE_STARTUP');
-// Ensure file input listeners are always attached after storage startup (even if storage is disabled)
-attachFileInputListeners();
-window.addEventListener('DOMContentLoaded', () => attachFileInputListeners());
+// ...existing code...
 setStatus('Ready. Load a Dataset (.pkl) to begin. Call data is optional.');
 logDebug('app.js initialized (storage startup temporarily disabled).');
 
@@ -2882,6 +2880,9 @@ if (els.clearBuildings && els.buildingSelect) {
 
 
 // File input events — attach in a function and call on DOMContentLoaded as well
+// Ensure file input listeners are always attached after storage startup (even if storage is disabled)
+attachFileInputListeners();
+window.addEventListener('DOMContentLoaded', () => attachFileInputListeners());
 function attachFileInputListeners() {
   if (!els.fileInput) {
     setStatus('App initialization: file input not found in DOM yet. Will retry on DOMContentLoaded.');
