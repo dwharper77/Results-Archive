@@ -17,6 +17,11 @@ const STYLE_DATA_NUM = {
   border: BORDER_THIN,
   numFmt: '0.00',
 };
+const STYLE_IDENTIFIER = {
+  font: { name: 'Calibri', sz: 11, color: { rgb: 'FF000000' } },
+  alignment: { horizontal: 'left', vertical: 'top' },
+  border: BORDER_THIN,
+};
 const STYLE_LEFTCOLS = {
   font: { name: 'Calibri', sz: 11, color: { rgb: 'FF1CA45C' } },
   alignment: { horizontal: 'left', vertical: 'top' },
