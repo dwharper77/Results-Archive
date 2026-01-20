@@ -1,4 +1,11 @@
-    // Added missing STYLE_STAGE_RED for special stage cells
+    // Define BORDER_THIN at top for global use
+    const BORDER_THIN = {
+      top: { style: 'thin', color: { rgb: 'FF000000' } },
+      bottom: { style: 'thin', color: { rgb: 'FF000000' } },
+      left: { style: 'thin', color: { rgb: 'FF000000' } },
+      right: { style: 'thin', color: { rgb: 'FF000000' } },
+    };
+
     const STYLE_STAGE_RED = {
       font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFC00000' } },
       alignment: { horizontal: 'center', vertical: 'center' },
@@ -1341,49 +1348,7 @@ async function exportCallsToKml() {
 }
 
 function exportCurrentPivotToExcel() {
-    // --- Styles (define at top for global use in function) ---
-    const BORDER_THIN = {
-      top: { style: 'thin', color: { rgb: 'FF000000' } },
-      bottom: { style: 'thin', color: { rgb: 'FF000000' } },
-      left: { style: 'thin', color: { rgb: 'FF000000' } },
-      right: { style: 'thin', color: { rgb: 'FF000000' } },
-    };
-    const STYLE_LEFTCOLS = {
-      font: { name: 'Calibri', sz: 11, color: { rgb: 'FF1CA45C' } },
-      alignment: { horizontal: 'left', vertical: 'top' },
-      border: BORDER_THIN,
-    };
-    const STYLE_HEADER = {
-      font: { bold: true, color: { rgb: 'FFFFFFFF' } },
-      fill: { patternType: 'solid', fgColor: { rgb: 'FF1F4E78' } },
-      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
-      border: BORDER_THIN,
-    };
-    const STYLE_TIMESTAMP = {
-      font: { italic: true },
-      fill: { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border: BORDER_THIN,
-    };
-    const STYLE_DATA_NUM = {
-      font: { color: { rgb: 'FFC00000' } },
-      alignment: { horizontal: 'right', vertical: 'top' },
-      border: BORDER_THIN,
-      numFmt: '0.00',
-    };
-    // Added missing STYLE_DATA_TEXT for text cells in export
-    const STYLE_DATA_TEXT = {
-      font: { color: { rgb: 'FF000000' } },
-      alignment: { horizontal: 'left', vertical: 'top' },
-      border: BORDER_THIN,
-    };
-
-    // Added missing STYLE_TITLE for worksheet title row
-    const STYLE_TITLE = {
-      font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FF1F4E78' } },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border: BORDER_THIN,
-    };
+    // ...existing code...
   const XLSX = window.XLSX;
   if (!XLSX) {
     setStatus('Excel export library not loaded yet. Please refresh and try again.', { error: true });
