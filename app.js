@@ -2914,8 +2914,15 @@ function attachFileInputListeners() {
     }
   };
 
-  els.fileInput.addEventListener('change', fileChangeHandler);
-  els.fileInput.addEventListener('input', fileChangeHandler);
+  console.log('REACHED FILE INPUT HANDLER SETUP');
+  els.fileInput.addEventListener('change', function(event) {
+    console.log('FILE INPUT CHANGED', event.target.files);
+    return fileChangeHandler(event);
+  });
+  els.fileInput.addEventListener('input', function(event) {
+    console.log('FILE INPUT CHANGED', event.target.files);
+    return fileChangeHandler(event);
+  });
   els.fileInput.__listenersAttached = true;
 }
 
