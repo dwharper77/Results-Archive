@@ -1436,7 +1436,7 @@ function exportCurrentPivotToExcel() {
   const lastRow = aoa.length - 1;
   const ySplit = 5;
   // --- Custom column widths as requested ---
-  ws = XLSX.utils.aoa_to_sheet(aoa);
+  let ws = XLSX.utils.aoa_to_sheet(aoa);
   ws['!cols'] = [
     { wch: 20 }, // Identifier
     { wch: 15 }, // Building
