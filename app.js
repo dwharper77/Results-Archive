@@ -1,3 +1,10 @@
+  // --- Style application helper (must be defined before use) ---
+  const applyStyle = (r, c, style) => {
+    const addr = XLSX.utils.encode_cell({ r, c });
+    const cell = ws[addr];
+    if (!cell) return;
+    cell.s = { ...(cell.s || {}), ...(style || {}) };
+  };
 // --- Color Palette ---
 const GRAY = 'FFD9D9D9';
 // --- Style Definitions (global) ---
