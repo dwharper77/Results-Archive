@@ -1,3 +1,5 @@
+// --- Color Palette ---
+const GRAY = 'FFD9D9D9';
 // --- Style Definitions (global) ---
 const BORDER_THIN = {
   top: { style: 'thin', color: { rgb: 'FF000000' } },
