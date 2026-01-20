@@ -2884,14 +2884,19 @@ if (els.clearBuildings && els.buildingSelect) {
 attachFileInputListeners();
 window.addEventListener('DOMContentLoaded', () => attachFileInputListeners());
 function attachFileInputListeners() {
+  console.log('[DIAG] attachFileInputListeners called');
   if (!els.fileInput) {
+    console.log('[DIAG] attachFileInputListeners: els.fileInput is missing, returning early');
     setStatus('App initialization: file input not found in DOM yet. Will retry on DOMContentLoaded.');
     logDebug('Notice: #fileInput not found yet; delaying listener attachment.');
     return;
   }
 
   console.log('[app] attaching fileInput listeners, element=', els.fileInput);
-  if (els.fileInput.__listenersAttached) return;
+  if (els.fileInput.__listenersAttached) {
+    console.log('[DIAG] attachFileInputListeners: listeners already attached, returning early');
+    return;
+  }
 
   els.fileInput.addEventListener('click', () => {
     console.log('[app] fileInput clicked');
