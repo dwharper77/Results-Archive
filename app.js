@@ -1695,8 +1695,8 @@ function exportCurrentPivotToExcel() {
     console.error(err);
     setStatus(`Excel export failed: ${err?.message ?? String(err)}`, { error: true });
   }
-}
 
+  }
 // Ensure exportCurrentPivotToExcel is globally accessible for button event handlers
 window.exportCurrentPivotToExcel = exportCurrentPivotToExcel;
 
