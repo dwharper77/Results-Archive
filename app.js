@@ -1541,19 +1541,41 @@ function exportCurrentPivotToExcel() {
   }
 
   for (const building of Object.keys(buildingGroups)) {
-    let prevParticipant = null;
-    let prevSection = null;
-    let aoaBuilding = [titleRow, generatedRow, spacerRow, headerTop, headerSub];
+    // (Declarations moved inside the new block below)
+    let aoaBuilding = [];
     const HEADER_TOP_ROW = 3, HEADER_SUB_ROW = 4, DATA_START_ROW = 5;
     const prevVals = new Array(leftCols.length).fill(undefined);
-    for (const rowId of buildingGroups[building]) {
+    // Sort building rows by participant, then by section using SECTION_ORDER
+    const SECTION_ORDER = ['Results', 'Location Technology', 'Handset', 'Point', 'Path'];
+    const buildingRows = buildingGroups[building].map(rowId => {
       const meta = pivot.rowMeta?.get(rowId) ?? {};
       const participant = meta['Participant'] || meta['participant'] || meta[leftCols.find(c => c.key.toLowerCase() === 'participant')?.key];
       const section = meta['Section'] || meta['section'] || meta[leftCols.find(c => c.key.toLowerCase() === 'section')?.key];
+      return { rowId, participant, section, meta };
+    });
+    buildingRows.sort((a, b) => {
+      // Sort by participant first
+      if (a.participant !== b.participant) return String(a.participant).localeCompare(String(b.participant));
+      // Then by section order
+      const aIdx = SECTION_ORDER.indexOf(a.section);
+      const bIdx = SECTION_ORDER.indexOf(b.section);
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return String(a.section).localeCompare(String(b.section));
+    });
 
-      // Insert blank row and bolded header for new participant
+    // (Declarations moved above, remove duplicate)
+    for (const { rowId, participant, section, meta } of buildingRows) {
+      // Insert header and blank row for new participant
       if (prevParticipant !== null && participant !== prevParticipant) {
         aoaBuilding.push(Array(headerTop.length).fill(''));
+        // Insert header rows before each participant section
+        aoaBuilding.push([...titleRow]);
+        aoaBuilding.push([...generatedRow]);
+        aoaBuilding.push([...spacerRow]);
+        aoaBuilding.push([...headerTop]);
+        aoaBuilding.push([...headerSub]);
         const participantHeader = Array(leftCols.length).fill('');
         participantHeader[leftCols.findIndex(c => c.key.toLowerCase() === 'participant')] = participant;
         aoaBuilding.push(participantHeader);
@@ -1564,6 +1586,17 @@ function exportCurrentPivotToExcel() {
         const sectionHeader = Array(leftCols.length).fill('');
         sectionHeader[leftCols.findIndex(c => c.key.toLowerCase() === 'section')] = section;
         aoaBuilding.push(sectionHeader);
+      }
+      // If this is the very first participant, insert the header at the top
+      if (prevParticipant === null) {
+        aoaBuilding.push([...titleRow]);
+        aoaBuilding.push([...generatedRow]);
+        aoaBuilding.push([...spacerRow]);
+        aoaBuilding.push([...headerTop]);
+        aoaBuilding.push([...headerSub]);
+        const participantHeader = Array(leftCols.length).fill('');
+        participantHeader[leftCols.findIndex(c => c.key.toLowerCase() === 'participant')] = participant;
+        aoaBuilding.push(participantHeader);
       }
       prevParticipant = participant;
       prevSection = section;
@@ -1632,6 +1665,13 @@ function exportCurrentPivotToExcel() {
     // Data and group label styles
     const participantColIdx = leftCols.findIndex(c => c.key.toLowerCase() === 'participant');
     const sectionColIdx = leftCols.findIndex(c => c.key.toLowerCase() === 'section');
+    // Define a light green for all data rows
+    const LIGHT_GREEN = 'FFB6EFD3'; // pastel green, adjust as needed
+    // Only horizontal borders (top and bottom)
+    const BORDER_HORIZONTAL = {
+      top: { style: 'thin', color: { rgb: 'FF1CA45C' } },
+      bottom: { style: 'thin', color: { rgb: 'FF1CA45C' } }
+    };
     for (let r = HEADER_SUB_ROW + 1; r < aoaBuilding.length; r++) {
       const isGroupLabel = (
         (participantColIdx >= 0 && wsBuilding[XLSX.utils.encode_cell({ r, c: participantColIdx })]?.v) ||
@@ -1642,14 +1682,16 @@ function exportCurrentPivotToExcel() {
         const cell = wsBuilding[addr];
         if (!cell) continue;
         if (isGroupLabel) {
-          // Bold, green group label
+          // Bold, green group label (keep full border for group label)
           cell.s = { font: { bold: true, color: { rgb: GREEN } }, alignment: { horizontal: 'left', vertical: 'center' }, border: BORDER_THIN_BLACK };
-        } else if (c >= leftCols.length) {
-          // Metric columns: red numbers, right aligned
-          cell.s = { font: { color: { rgb: RED } }, alignment: { horizontal: 'right', vertical: 'top' }, border: BORDER_THIN_BLACK, numFmt: '0.0' };
         } else {
-          // Text columns: left aligned, border
-          cell.s = { alignment: { horizontal: 'left', vertical: 'top' }, border: BORDER_THIN_BLACK };
+          // All data rows: light green text, only horizontal borders
+          cell.s = {
+            font: { color: { rgb: LIGHT_GREEN } },
+            alignment: { horizontal: c >= leftCols.length ? 'right' : 'left', vertical: 'top' },
+            border: BORDER_HORIZONTAL,
+            ...(c >= leftCols.length ? { numFmt: '0.0' } : {})
+          };
         }
       }
     }
