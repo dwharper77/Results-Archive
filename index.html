@@ -132,58 +132,67 @@
   </main>
 
   <footer class="app-footer muted">
-    <strong id="buildStamp">dev-99</strong>
+    <strong id="buildStamp">dev-100</strong>
   </footer>
 
 
-  <!-- Load the app module with a visible error fallback (so failures aren't silent). -->
-  <script type="module" src="./app.js"></script>
+<!-- Load the app module with a visible error fallback (so failures aren't silent). -->
+<script type="module" src="./app.js"></script>
 
-  <script>
-    const logEl = document.getElementById('debugLog');
-    const statusEl = document.getElementById('statusText');
-    const log = (msg) => {
-      if (!logEl) return;
-      const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
-      logEl.textContent += (logEl.textContent ? "\n" : "") + line;
-    };
+<!-- Inline error logging + global handlers -->
+<script>
+  const logEl = document.getElementById('debugLog');
+  const statusEl = document.getElementById('statusText');
 
-    window.addEventListener('error', function(e) {
-      alert('A JavaScript error occurred: ' + e.message + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
-      log('Global error: ' + e.message + ' at ' + (e.filename || '') + ':' + (e.lineno || ''));
-    });
-    window.addEventListener('unhandledrejection', function(e) {
-      alert('A JavaScript promise error occurred: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
-      log('Global promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
-    });
+  const log = (msg) => {
+    if (!logEl) return;
+    const line = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    logEl.textContent += (logEl.textContent ? "\n" : "") + line;
+  };
 
-    log('Bootstrapping app module…');
-  </script>
+  window.addEventListener('error', function(e) {
+    alert('A JavaScript error occurred: ' + e.message + '\n' + (e.filename || '') + ':' + (e.lineno || ''));
+    log('Global error: ' + e.message + ' at ' + (e.filename || '') + ':' + (e.lineno || ''));
+  });
 
-    // The import below is now redundant, but left for fallback error handling.
-    // import('./app.js').then(() => {
-    //   log('App module loaded.');
-    // }).catch((err) => {
-    //   console.error(err);
-    //   if (statusEl) {
-    //     statusEl.textContent = `App failed to start: ${err?.message ?? String(err)}`;
-    //     statusEl.style.color = 'var(--danger)';
-    //   }
-    //   log(`App failed to start: ${err?.stack ?? (err?.message ?? String(err))}`);
-    // });
-  </script>
-  <script>
-    // Basic SW registration for the app shell.
-    // (Service worker doesn't cache Pyodide CDN assets by default.)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').then((reg) => {
-          // Encourage quick updates while iterating.
-          reg.update().catch(() => {});
-        }).catch(() => {});
-      });
+  window.addEventListener('unhandledrejection', function(e) {
+    alert('A JavaScript promise error occurred: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    log('Global promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+
+  log('Bootstrapping app module…');
+</script>
+
+<!-- Optional fallback dynamic import (kept commented, but now safely inside a script tag) -->
+<script>
+  // The import below is now redundant, but left for fallback error handling.
+  /*
+  import('./app.js').then(() => {
+    log('App module loaded.');
+  }).catch((err) => {
+    console.error(err);
+    if (statusEl) {
+      statusEl.textContent = `App failed to start: ${err?.message ?? String(err)}`;
+      statusEl.style.color = 'var(--danger)';
     }
-  </script>
+    log(`App failed to start: ${err?.stack ?? (err?.message ?? String(err))}`);
+  });
+  */
+</script>
+
+<!-- Service worker registration -->
+<script>
+  // Basic SW registration for the app shell.
+  // (Service worker doesn't cache Pyodide CDN assets by default.)
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').then((reg) => {
+        // Encourage quick updates while iterating.
+        reg.update().catch(() => {});
+      }).catch(() => {});
+    });
+  }
+</script>
 
 </body>
 </html>
