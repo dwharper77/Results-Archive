@@ -1361,14 +1361,15 @@ function exportCurrentPivotToExcel() {
   const generatedRow = [`Generated ${formatDateYmdHm(now)}`, ...Array(lastCol).fill('')];
   const spacerRow = Array(lastCol + 1).fill('');
 
-  // Build a two-row header like the screenshot:
+  // Build a two-row header like the grid:
   // Row 1: left column labels + merged stage group headers.
   // Row 2: (blank under left headers) + metric subheaders (Hor/Ver 80%).
   const headerTop = leftCols.map((c) => String(c?.label ?? c?.key ?? ''));
   for (const s of stages) {
     const stageLabel = String(s).toLowerCase().startsWith('stage ') ? String(s) : `Stage ${s}`;
-    headerTop.push(stageLabel);
-    for (let i = 1; i < metricCount; i++) headerTop.push('');
+    for (let i = 0; i < metricCount; i++) {
+      headerTop.push(i === 0 ? stageLabel : '');
+    }
   }
 
   const headerSub = Array(leftCount).fill('');
@@ -1405,12 +1406,12 @@ function exportCurrentPivotToExcel() {
         prevVals[i] = val;
       }
     }
-    // Fill metric columns for each stage
-    for (let s = 0; s < stages.length; s++) {
-      for (let m = 0; m < metricKeys.length; m++) {
-        // Use the correct data structure for your pivot (values or data)
-        const v = pivot.values?.[rowId]?.[stages[s]]?.[metricKeys[m]] ?? 
-                  pivot.data?.get?.(rowId)?.get?.(stages[s])?.[metricKeys[m]];
+    // Fill metric columns for each stage (mirroring grid)
+    for (const s of stages) {
+      const rowMap = pivot.matrix?.get(rowId);
+      const cell = rowMap ? rowMap.get(s) : undefined;
+      for (const m of metricKeys) {
+        let v = cell && typeof cell === 'object' ? cell[m] : undefined;
         let formatted = '';
         if (v !== undefined && v !== null && v !== '') {
           const num = typeof v === 'number' ? v : Number(v);
