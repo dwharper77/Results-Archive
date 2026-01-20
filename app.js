@@ -1,3 +1,90 @@
+    // --- Style Definitions (global) ---
+    const STYLE_LEFTCOLS = {
+      font: { name: 'Calibri', sz: 11, color: { rgb: 'FF1CA45C' } },
+      alignment: { horizontal: 'left', vertical: 'top' },
+      border: BORDER_THIN,
+    };
+    const STYLE_HEADER = {
+      font: { bold: true, color: { rgb: 'FFFFFFFF' } },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FF1F4E78' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: BORDER_THIN,
+    };
+    const STYLE_DATA_NUM = {
+      font: { color: { rgb: 'FFC00000' } },
+      alignment: { horizontal: 'right', vertical: 'top' },
+      border: BORDER_THIN,
+      numFmt: '0.00',
+    };
+    const STYLE_DATA_TEXT = {
+      font: { color: { rgb: 'FF000000' } },
+      alignment: { horizontal: 'left', vertical: 'top' },
+      border: BORDER_THIN,
+    };
+    const STYLE_TITLE = {
+      font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FF1F4E78' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: BORDER_THIN,
+    };
+    const STYLE_GENERATED = {
+      font: { italic: true },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: BORDER_THIN,
+    };
+    const STYLE_SUMMARY = {
+      font: { bold: true, color: { rgb: 'FF1CA45C' } },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FFF2F2F2' } },
+      alignment: { horizontal: 'right', vertical: 'center' },
+      border: BORDER_THIN,
+    };
+    const STYLE_SUMMARY_LABEL = {
+      font: { bold: true, color: { rgb: 'FF1CA45C' } },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FFF2F2F2' } },
+      alignment: { horizontal: 'left', vertical: 'center' },
+      border: BORDER_THIN,
+    };
+    const STYLE_GROUP_LABEL = {
+      font: { bold: true, color: { rgb: 'FF1CA45C' } },
+      alignment: { horizontal: 'left', vertical: 'center' },
+      border: BORDER_THIN,
+    };
+    const STYLE_TEXT = {
+      font: { color: { rgb: 'FF1CA45C' } },
+      alignment: { horizontal: 'left', vertical: 'top' },
+      border: BORDER_THIN,
+    };
+    const STYLE_NUM = {
+      font: { color: { rgb: 'FF1CA45C' } },
+      alignment: { horizontal: 'right', vertical: 'top' },
+      border: BORDER_THIN,
+      numFmt: '0.00',
+    };
+    const STYLE_HDR = {
+      font: { bold: true, color: { rgb: 'FFFFFFFF' } },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FF1F4E78' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: BORDER_THIN,
+    };
+    const STYLE_HDR_GREEN = {
+      font: { bold: true, color: { rgb: 'FF1CA45C' } },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FF1CA45C' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: BORDER_THIN,
+    };
+    const STYLE_HDR_ORANGE = {
+      font: { bold: true, color: { rgb: 'FFFF9900' } },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FFFF9900' } },
+      alignment: { horizontal: 'center', vertical: 'center', wrapText: true },
+      border: BORDER_THIN,
+    };
+    // Added missing STYLE_TIMESTAMP for timestamp row
+    const STYLE_TIMESTAMP = {
+      font: { italic: true },
+      fill: { patternType: 'solid', fgColor: { rgb: 'FFD9D9D9' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+      border: BORDER_THIN,
+    };
     // Define BORDER_THIN at top for global use
     const BORDER_THIN = {
       top: { style: 'thin', color: { rgb: 'FF000000' } },
