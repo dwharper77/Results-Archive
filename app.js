@@ -1677,7 +1677,10 @@ function exportCurrentPivotToExcel() {
 
   const ws2_filters = XLSX.utils.aoa_to_sheet(buildFiltersSummaryAoA());
   ws2_filters['!cols'] = [{ wch: 24 }, { wch: 120 }];
-  XLSX.utils.book_append_sheet(wb, ws2_filters, 'Filters');
+  // Only add 'Filters' sheet if it does not already exist in this workbook
+  if (!wb.SheetNames.includes('Filters')) {
+    XLSX.utils.book_append_sheet(wb, ws2_filters, 'Filters');
+  }
 
   const dt_export = new Date();
   const buildingPart_export = state.filters.building && state.filters.building.size
@@ -1692,7 +1695,10 @@ function exportCurrentPivotToExcel() {
     console.error(err);
     setStatus(`Excel export failed: ${err?.message ?? String(err)}`, { error: true });
   }
-  }
+}
+
+// Ensure exportCurrentPivotToExcel is globally accessible for button event handlers
+window.exportCurrentPivotToExcel = exportCurrentPivotToExcel;
 
 function guessDimensionColumns(columns) {
   return {
