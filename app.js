@@ -1448,6 +1448,40 @@ function exportCurrentPivotToExcel() {
   const topLeftCell = XLSX.utils.encode_cell({ r: ySplit, c: leftCount });
   ws['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: leftCount, ySplit, topLeftCell, activePane: 'bottomRight' } }];
 
+  // --- Styles ---
+  // ...existing code...
+
+  // --- Apply styles ---
+  // Timestamp row (row 1)
+  ws['!merges'] = ws['!merges'] || [];
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: lastCol } });
+  for (let c = 0; c <= lastCol; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 1, c });
+    if (ws[addr]) ws[addr].s = STYLE_TIMESTAMP;
+  }
+  // Header rows (row 3, 4)
+  for (let r = 3; r <= 4; r++) {
+    for (let c = 0; c <= lastCol; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (ws[addr]) ws[addr].s = STYLE_HEADER;
+    }
+  }
+  // Data rows
+  for (let r = 5; r <= lastRow; r++) {
+    for (let c = 0; c <= lastCol; c++) {
+      const isMetric = c >= leftCount;
+      const stageIdx = isMetric ? Math.floor((c - leftCount) / metricCount) : -1;
+      const stageName = isMetric && stages[stageIdx] ? String(stages[stageIdx]).toLowerCase() : '';
+      const addr = XLSX.utils.encode_cell({ r, c });
+      if (!ws[addr]) continue;
+      if (isMetric && (stageName.includes('1d') || stageName.includes('za'))) {
+        ws[addr].s = STYLE_STAGE_RED;
+      } else {
+        ws[addr].s = isMetric ? STYLE_DATA_NUM : STYLE_DATA_TEXT;
+      }
+    }
+  }
+
   // Styling (xlsx-js-style) — match the screenshot style (bold title, dark blue headers, crisp borders).
   // --- Custom styles as requested ---
   const BORDER_THIN = {
