@@ -1399,11 +1399,7 @@ function exportCurrentPivotToExcel() {
     return;
   }
 
-  const leftCols = rowHeaderCols.map((c) => (typeof c === 'string' ? ({ key: c, label: c }) : c));
-  // Add OS back for export display only
-  if (state.dimCols.os) {
-    leftCols.splice(2, 0, { key: state.dimCols.os, label: 'OS' });
-  }
+  const leftCols = rowHeaderCols.displayCols;
   const leftCount = leftCols.length;
   const stages = pivot.cols;
   const { metricKeys, metricLabels } = getMetricConfig();
@@ -1449,6 +1445,7 @@ function exportCurrentPivotToExcel() {
         [state.dimCols.row_type]: SECTION_ORDER,
         OS: ['*'], // treat all OS values as equal, disables OS-based sorting
       },
+      rowKeys: rowHeaderCols.rowKeys
     })
     : pivot.rows;
 
@@ -2098,21 +2095,31 @@ function clearBuildingTextFilter() {
 }
 
 function getRowHeaderCols() {
+  // Returns both rowKeys (for pivot sorting) and displayCols (for export/viewer display)
   const buildingCol = state.dimCols.building;
   const participantCol = state.dimCols.participant;
-  
+  const osCol = state.dimCols.os;
   const sectionCol = state.dimCols.row_type;
   const idCol = state.dimCols.id;
 
-  const cols = [];
-  if (buildingCol) cols.push({ key: buildingCol, label: 'Building' });
-  if (participantCol) cols.push({ key: participantCol, label: 'Participant' });
-  
-  if (sectionCol) cols.push({ key: sectionCol, label: 'Section' });
-  if (idCol) cols.push({ key: idCol, label: 'Identifier' });
+  // rowKeys: used for pivot sorting/grouping (NO OS)
+  const rowKeys = [];
+  if (buildingCol) rowKeys.push(buildingCol);
+  if (participantCol) rowKeys.push(participantCol);
+  if (sectionCol) rowKeys.push(sectionCol);
+  if (idCol) rowKeys.push(idCol);
+  if (!rowKeys.length && participantCol) rowKeys.push(participantCol);
 
-  if (!cols.length && participantCol) cols.push({ key: participantCol, label: 'Participant' });
-  return cols;
+  // displayCols: used for export and viewer (INCLUDES OS)
+  const displayCols = [];
+  if (buildingCol) displayCols.push({ key: buildingCol, label: 'Building' });
+  if (participantCol) displayCols.push({ key: participantCol, label: 'Participant' });
+  if (osCol) displayCols.push({ key: osCol, label: 'OS' });
+  if (sectionCol) displayCols.push({ key: sectionCol, label: 'Section' });
+  if (idCol) displayCols.push({ key: idCol, label: 'Identifier' });
+  if (!displayCols.length && participantCol) displayCols.push({ key: participantCol, label: 'Participant' });
+
+  return { rowKeys, displayCols };
 }
 
 function pruneIdBySectionToSelectedSections() {
@@ -2680,7 +2687,7 @@ function render() {
   }
 
   const rowHeaderCols = getRowHeaderCols();
-  const rowKeys = rowHeaderCols.map((c) => c.key);
+  const rowKeys = rowHeaderCols.rowKeys;
   const colKey = state.dimCols.stage;
 
   if (!rowKeys.length) {
