@@ -499,6 +499,10 @@ function sortPivotRowsByRowKeys(pivot, { preferredOrderByKey = {} } = {}) {
   const compareValues = (key, aVal, bVal) => {
     const map = orderMaps.get(key);
     if (map) {
+      // If this key is configured with ['*'], treat all values as equal and skip sorting by this key.
+      if (map.size === 1 && map.has('*')) {
+        return 0;
+      }
       const ak = String(aVal ?? '').toLowerCase();
       const bk = String(bVal ?? '').toLowerCase();
       const ar = map.has(ak) ? map.get(ak) : Number.POSITIVE_INFINITY;
@@ -538,6 +542,10 @@ function sortRowIdsByRowKeys(rowIds, pivot, { preferredOrderByKey = {} } = {}) {
   const compareValues = (key, aVal, bVal) => {
     const map = orderMaps.get(key);
     if (map) {
+      // If this key is configured with ['*'], treat all values as equal and skip sorting by this key.
+      if (map.size === 1 && map.has('*')) {
+        return 0;
+      }
       const ak = String(aVal ?? '').toLowerCase();
       const bk = String(bVal ?? '').toLowerCase();
       const ar = map.has(ak) ? map.get(ak) : Number.POSITIVE_INFINITY;
@@ -2095,31 +2103,21 @@ function clearBuildingTextFilter() {
 }
 
 function getRowHeaderCols() {
-  // Returns both rowKeys (for pivot sorting) and displayCols (for export/viewer display)
   const buildingCol = state.dimCols.building;
   const participantCol = state.dimCols.participant;
   const osCol = state.dimCols.os;
   const sectionCol = state.dimCols.row_type;
   const idCol = state.dimCols.id;
 
-  // rowKeys: used for pivot sorting/grouping (NO OS)
-  const rowKeys = [];
-  if (buildingCol) rowKeys.push(buildingCol);
-  if (participantCol) rowKeys.push(participantCol);
-  if (sectionCol) rowKeys.push(sectionCol);
-  if (idCol) rowKeys.push(idCol);
-  if (!rowKeys.length && participantCol) rowKeys.push(participantCol);
+  const cols = [];
+  if (buildingCol) cols.push({ key: buildingCol, label: 'Building' });
+  if (participantCol) cols.push({ key: participantCol, label: 'Participant' });
+  if (osCol) cols.push({ key: osCol, label: 'OS' });
+  if (sectionCol) cols.push({ key: sectionCol, label: 'Section' });
+  if (idCol) cols.push({ key: idCol, label: 'Identifier' });
 
-  // displayCols: used for export and viewer (INCLUDES OS)
-  const displayCols = [];
-  if (buildingCol) displayCols.push({ key: buildingCol, label: 'Building' });
-  if (participantCol) displayCols.push({ key: participantCol, label: 'Participant' });
-  if (osCol) displayCols.push({ key: osCol, label: 'OS' });
-  if (sectionCol) displayCols.push({ key: sectionCol, label: 'Section' });
-  if (idCol) displayCols.push({ key: idCol, label: 'Identifier' });
-  if (!displayCols.length && participantCol) displayCols.push({ key: participantCol, label: 'Participant' });
-
-  return { rowKeys, displayCols };
+  if (!cols.length && participantCol) cols.push({ key: participantCol, label: 'Participant' });
+  return cols;
 }
 
 function pruneIdBySectionToSelectedSections() {
