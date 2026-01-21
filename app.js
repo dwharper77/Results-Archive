@@ -2096,14 +2096,14 @@ function clearBuildingTextFilter() {
 function getRowHeaderCols() {
   const buildingCol = state.dimCols.building;
   const participantCol = state.dimCols.participant;
-  const osCol = state.dimCols.os;
+  
   const sectionCol = state.dimCols.row_type;
   const idCol = state.dimCols.id;
 
   const cols = [];
   if (buildingCol) cols.push({ key: buildingCol, label: 'Building' });
   if (participantCol) cols.push({ key: participantCol, label: 'Participant' });
-  if (osCol) cols.push({ key: osCol, label: 'OS' });
+  
   if (sectionCol) cols.push({ key: sectionCol, label: 'Section' });
   if (idCol) cols.push({ key: idCol, label: 'Identifier' });
 
