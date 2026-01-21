@@ -1633,6 +1633,8 @@ function exportCurrentPivotToExcel() {
         wsBuilding['!merges'].push({ s: { r: 3, c: startCol }, e: { r: 3, c: endCol } });
       }
     }
+    // Freeze header rows so they remain visible when scrolling
+    wsBuilding['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: 0, ySplit: 5, topLeftCell: XLSX.utils.encode_cell({ r: 5, c: 0 }), activePane: 'bottomLeft' } }];
     // Add a black border around the entire data region
     const borderRange = { s: { r: 3, c: 0 }, e: { r: aoaBuilding.length - 1, c: headerTop.length - 1 } };
     for (let r = borderRange.s.r; r <= borderRange.e.r; r++) {
