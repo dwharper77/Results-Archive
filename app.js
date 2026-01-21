@@ -1528,33 +1528,39 @@ function exportCurrentPivotToExcel() {
       const section = meta['Section'] || meta['section'] || meta[leftCols.find(c => c.key.toLowerCase() === 'section')?.key];
       return { rowId, participant, section, meta };
     });
-    buildingRows.sort((a, b) => {
-      // Sort by participant first
-      if (a.participant !== b.participant) return String(a.participant).localeCompare(String(b.participant));
-      // Strictly group by Section using SECTION_ORDER
-      const aIdx = SECTION_ORDER.indexOf(a.section);
-      const bIdx = SECTION_ORDER.indexOf(b.section);
-      if (aIdx !== -1 && bIdx !== -1) {
-        if (aIdx !== bIdx) return aIdx - bIdx;
-      } else if (aIdx !== -1) {
-        return -1;
-      } else if (bIdx !== -1) {
-        return 1;
-      } else {
-        // If both sections are not in SECTION_ORDER, sort alphabetically
-        if (a.section !== b.section) return String(a.section).localeCompare(String(b.section));
-      }
-      // Within each section, sort by OS, then Identifier, then rowId
-      if (a.meta.OS && b.meta.OS && a.meta.OS !== b.meta.OS) return String(a.meta.OS).localeCompare(String(b.meta.OS));
-      if (a.meta.Identifier && b.meta.Identifier && a.meta.Identifier !== b.meta.Identifier) return String(a.meta.Identifier).localeCompare(String(b.meta.Identifier));
-      return String(a.rowId).localeCompare(String(b.rowId));
+    // Group rows by participant
+    const participantGroups = {};
+    for (const row of buildingRows) {
+      const key = String(row.participant);
+      if (!participantGroups[key]) participantGroups[key] = [];
+      participantGroups[key].push(row);
+    }
+    // Sort each participant group by SECTION_ORDER, then OS, Identifier, rowId
+    const sortedRows = [];
+    Object.values(participantGroups).forEach(group => {
+      group.sort((a, b) => {
+        const aIdx = SECTION_ORDER.indexOf(a.section);
+        const bIdx = SECTION_ORDER.indexOf(b.section);
+        if (aIdx !== -1 && bIdx !== -1) {
+          if (aIdx !== bIdx) return aIdx - bIdx;
+        } else if (aIdx !== -1) {
+          return -1;
+        } else if (bIdx !== -1) {
+          return 1;
+        } else {
+          if (a.section !== b.section) return String(a.section).localeCompare(String(b.section));
+        }
+        if (a.meta.OS && b.meta.OS && a.meta.OS !== b.meta.OS) return String(a.meta.OS).localeCompare(String(b.meta.OS));
+        if (a.meta.Identifier && b.meta.Identifier && a.meta.Identifier !== b.meta.Identifier) return String(a.meta.Identifier).localeCompare(String(b.meta.Identifier));
+        return String(a.rowId).localeCompare(String(b.rowId));
+      });
+      sortedRows.push(...group);
     });
-    // Remove any nulls from buildingRows before iterating
     let prevParticipant = null;
     let prevSection = null;
     let prevVals = new Array(leftCols.length).fill(undefined);
     let headerAdded = false;
-    for (const { rowId, participant, section, meta } of buildingRows) {
+    for (const { rowId, participant, section, meta } of sortedRows) {
       // Insert empty row between participant sections
       if (prevParticipant !== null && participant !== prevParticipant) {
         aoaBuilding.push(Array(headerTop.length).fill(''));
@@ -1582,8 +1588,16 @@ function exportCurrentPivotToExcel() {
       for (let i = 0; i < leftCols.length; i++) {
         const key = leftCols[i].key;
         const val = meta[key];
-        // Only remove duplicates for Building and Participant columns
-        if (key.toLowerCase() === 'building' || key.toLowerCase() === 'participant') {
+        // Remove duplicates for Building only within the entire sheet, and Participant only within each group
+        if (key.toLowerCase() === 'building') {
+          // Only show Building once at the top, then blank for subsequent rows
+          if (prevVals[i] === undefined) {
+            row.push(val);
+            prevVals[i] = val;
+          } else {
+            row.push('');
+          }
+        } else if (key.toLowerCase() === 'participant') {
           if (prevVals[i] === val) {
             row.push('');
           } else {
