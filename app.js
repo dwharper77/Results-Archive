@@ -1680,11 +1680,36 @@ function exportCurrentPivotToExcel() {
             bottom: { style: 'thin', color: { rgb: 'FF000000' } }
           };
         } else {
-          // Only top and bottom borders for participant section data rows
-          cell.s.border = {
-            top:    { style: 'thin', color: { rgb: 'FF000000' } },
-            bottom: { style: 'thin', color: { rgb: 'FF000000' } }
-          };
+          // Add vertical borders only to the outside (first and last columns)
+          if (c === borderRange.s.c && c === borderRange.e.c) {
+            // Only one column: all borders (vertical thin, horizontal dotted)
+            cell.s.border = {
+              top:    { style: 'dotted', color: { rgb: 'FF000000' } },
+              bottom: { style: 'dotted', color: { rgb: 'FF000000' } },
+              left:   { style: 'thin', color: { rgb: 'FF000000' } },
+              right:  { style: 'thin', color: { rgb: 'FF000000' } }
+            };
+          } else if (c === borderRange.s.c) {
+            // First column: left border (vertical thin, horizontal dotted)
+            cell.s.border = {
+              top:    { style: 'dotted', color: { rgb: 'FF000000' } },
+              bottom: { style: 'dotted', color: { rgb: 'FF000000' } },
+              left:   { style: 'thin', color: { rgb: 'FF000000' } }
+            };
+          } else if (c === borderRange.e.c) {
+            // Last column: right border (vertical thin, horizontal dotted)
+            cell.s.border = {
+              top:    { style: 'dotted', color: { rgb: 'FF000000' } },
+              bottom: { style: 'dotted', color: { rgb: 'FF000000' } },
+              right:  { style: 'thin', color: { rgb: 'FF000000' } }
+            };
+          } else {
+            // Inner columns: only top and bottom, both dotted
+            cell.s.border = {
+              top:    { style: 'dotted', color: { rgb: 'FF000000' } },
+              bottom: { style: 'dotted', color: { rgb: 'FF000000' } }
+            };
+          }
         }
         // Apply red font to 80% columns in data rows only
         if (!isHeader && eightyColIndices.includes(c)) {
