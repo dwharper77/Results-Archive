@@ -1665,18 +1665,25 @@ function exportCurrentPivotToExcel() {
         const cell = wsBuilding[addr];
         if (!cell) continue;
         cell.s = cell.s || {};
-        if (isEmptyRow) {
+        if (isHeader) {
+          // Keep all borders for header rows
+          cell.s.border = {
+            top:    { style: 'thin', color: { rgb: 'FF000000' } },
+            bottom: { style: 'thin', color: { rgb: 'FF000000' } },
+            left:   { style: 'thin', color: { rgb: 'FF000000' } },
+            right:  { style: 'thin', color: { rgb: 'FF000000' } }
+          };
+        } else if (isEmptyRow) {
           // Only top and bottom borders for empty row
           cell.s.border = {
             top:    { style: 'thin', color: { rgb: 'FF000000' } },
             bottom: { style: 'thin', color: { rgb: 'FF000000' } }
           };
         } else {
+          // Only top and bottom borders for participant section data rows
           cell.s.border = {
-            top:   { style: 'thin', color: { rgb: 'FF000000' } },
-            bottom:{ style: 'thin', color: { rgb: 'FF000000' } },
-            left:  { style: 'thin', color: { rgb: 'FF000000' } },
-            right: { style: 'thin', color: { rgb: 'FF000000' } },
+            top:    { style: 'thin', color: { rgb: 'FF000000' } },
+            bottom: { style: 'thin', color: { rgb: 'FF000000' } }
           };
         }
         // Apply red font to 80% columns in data rows only
