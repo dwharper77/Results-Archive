@@ -1576,15 +1576,8 @@ function exportCurrentPivotToExcel() {
       for (let i = 0; i < leftCols.length; i++) {
         const key = leftCols[i].key;
         const val = meta[key];
-        // Exclude OS column from duplicate removal
-        if (key.toLowerCase() === 'os') {
-          row.push(val);
-        } else if (prevVals[i] === val) {
-          row.push('');
-        } else {
-          row.push(val);
-          prevVals[i] = val;
-        }
+        // No duplicate removal: always show value
+        row.push(val);
       }
       for (const s of stages) {
         const rowMap = pivot.matrix?.get(rowId);
