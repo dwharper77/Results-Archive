@@ -1409,7 +1409,7 @@ function exportCurrentPivotToExcel() {
     return;
   }
 
-  const leftCols = rowHeaderCols.displayCols;
+  const leftCols = rowHeaderCols.map((c) => (typeof c === 'string' ? ({ key: c, label: c }) : c));
   const leftCount = leftCols.length;
   const stages = pivot.cols;
   const { metricKeys, metricLabels } = getMetricConfig();
