@@ -1474,17 +1474,16 @@ function exportCurrentPivotToExcel() {
   const topLeftCell = XLSX.utils.encode_cell({ r: ySplit, c: leftCount });
   ws['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: leftCount, ySplit, topLeftCell, activePane: 'bottomRight' } }];
 
-  // --- Only apply header style ---
-  for (let r = 3; r <= 4; r++) for (let c = 0; c <= lastCol; c++) applyStyle(r, c, STYLE_HEADER);
-
-  
-
+  // --- Helper to apply style to a cell ---
   const applyStyle = (r, c, style) => {
     const addr = XLSX.utils.encode_cell({ r, c });
     const cell = ws[addr];
     if (!cell) return;
     cell.s = { ...(cell.s || {}), ...(style || {}) };
   };
+
+  // --- Only apply header style ---
+  for (let r = 3; r <= 4; r++) for (let c = 0; c <= lastCol; c++) applyStyle(r, c, STYLE_HEADER);
 
 
   const wb = XLSX.utils.book_new();
