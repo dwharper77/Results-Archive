@@ -1400,6 +1400,10 @@ function exportCurrentPivotToExcel() {
   }
 
   const leftCols = rowHeaderCols.map((c) => (typeof c === 'string' ? ({ key: c, label: c }) : c));
+  // Add OS back for export display only
+  if (state.dimCols.os) {
+    leftCols.splice(2, 0, { key: state.dimCols.os, label: 'OS' });
+  }
   const leftCount = leftCols.length;
   const stages = pivot.cols;
   const { metricKeys, metricLabels } = getMetricConfig();
