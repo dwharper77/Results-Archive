@@ -1530,13 +1530,18 @@ function exportCurrentPivotToExcel() {
     });
     buildingRows.sort((a, b) => {
       if (a.participant !== b.participant) return String(a.participant).localeCompare(String(b.participant));
-      // Sort by SECTION_ORDER if present, otherwise alphabetically after known sections
+      // Group by Section (SECTION_ORDER), then by OS, then by Identifier, then by any other fields as fallback
       const aIdx = SECTION_ORDER.indexOf(a.section);
       const bIdx = SECTION_ORDER.indexOf(b.section);
-      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1 && bIdx !== -1 && aIdx !== bIdx) return aIdx - bIdx;
       if (aIdx !== -1) return -1;
       if (bIdx !== -1) return 1;
-      return String(a.section).localeCompare(String(b.section));
+      // If section is the same, sort by OS, then Identifier, then fallback to stringified meta
+      if (a.section !== b.section) return String(a.section).localeCompare(String(b.section));
+      if (a.meta.OS && b.meta.OS && a.meta.OS !== b.meta.OS) return String(a.meta.OS).localeCompare(String(b.meta.OS));
+      if (a.meta.Identifier && b.meta.Identifier && a.meta.Identifier !== b.meta.Identifier) return String(a.meta.Identifier).localeCompare(String(b.meta.Identifier));
+      // Fallback: stable sort by rowId
+      return String(a.rowId).localeCompare(String(b.rowId));
     });
     // Remove any nulls from buildingRows before iterating
     let prevParticipant = null;
@@ -1571,7 +1576,10 @@ function exportCurrentPivotToExcel() {
       for (let i = 0; i < leftCols.length; i++) {
         const key = leftCols[i].key;
         const val = meta[key];
-        if (prevVals[i] === val) {
+        // Exclude OS column from duplicate removal
+        if (key.toLowerCase() === 'os') {
+          row.push(val);
+        } else if (prevVals[i] === val) {
           row.push('');
         } else {
           row.push(val);
