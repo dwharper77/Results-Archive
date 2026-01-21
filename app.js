@@ -1539,12 +1539,13 @@ function exportCurrentPivotToExcel() {
       const bIdx = SECTION_ORDER.indexOf(b.section);
       return aIdx - bIdx;
     });
+    // Remove any nulls from buildingRows before iterating
+    const filteredBuildingRows = buildingRows.filter(Boolean);
     let prevParticipant = null;
     let prevSection = null;
     let prevVals = new Array(leftCols.length).fill(undefined);
     let headerAdded = false;
-    for (const { rowId, participant, section, meta } of buildingRows) {
-        if (!rowId) continue; // skip rows not in SECTION_ORDER
+    for (const { rowId, participant, section, meta } of filteredBuildingRows) {
       // Insert empty row between participant sections
       if (prevParticipant !== null && participant !== prevParticipant) {
         aoaBuilding.push(Array(headerTop.length).fill(''));
