@@ -2685,7 +2685,7 @@ function render() {
   }
 
   const rowHeaderCols = getRowHeaderCols();
-  const rowKeys = rowHeaderCols.rowKeys;
+  const rowKeys = rowHeaderCols.map((c) => c.key);
   const colKey = state.dimCols.stage;
 
   if (!rowKeys.length) {
