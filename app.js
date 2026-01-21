@@ -1394,6 +1394,7 @@ async function exportCallsToKml() {
 
 function exportCurrentPivotToExcel() {
     // ...existing code...
+  console.log("rowHeaderCols at export:", rowHeaderCols);
   const XLSX = window.XLSX;
   if (!XLSX) {
     setStatus('Excel export library not loaded yet. Please refresh and try again.', { error: true });
