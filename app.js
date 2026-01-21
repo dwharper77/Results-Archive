@@ -1658,17 +1658,27 @@ function exportCurrentPivotToExcel() {
     for (let r = borderRange.s.r; r <= borderRange.e.r; r++) {
       // Only apply styles to data rows (not headerTop/headerSub)
       const isHeader = headerRowIndices.includes(r);
+      // Detect if this is an empty row (all cells are empty string)
+      const isEmptyRow = Array.isArray(aoaBuilding[r]) && aoaBuilding[r].every(v => v === '');
       for (let c = borderRange.s.c; c <= borderRange.e.c; c++) {
         const addr = XLSX.utils.encode_cell({ r, c });
         const cell = wsBuilding[addr];
         if (!cell) continue;
         cell.s = cell.s || {};
-        cell.s.border = {
-          top:   { style: 'thin', color: { rgb: 'FF000000' } },
-          bottom:{ style: 'thin', color: { rgb: 'FF000000' } },
-          left:  { style: 'thin', color: { rgb: 'FF000000' } },
-          right: { style: 'thin', color: { rgb: 'FF000000' } },
-        };
+        if (isEmptyRow) {
+          // Only top and bottom borders for empty row
+          cell.s.border = {
+            top:    { style: 'thin', color: { rgb: 'FF000000' } },
+            bottom: { style: 'thin', color: { rgb: 'FF000000' } }
+          };
+        } else {
+          cell.s.border = {
+            top:   { style: 'thin', color: { rgb: 'FF000000' } },
+            bottom:{ style: 'thin', color: { rgb: 'FF000000' } },
+            left:  { style: 'thin', color: { rgb: 'FF000000' } },
+            right: { style: 'thin', color: { rgb: 'FF000000' } },
+          };
+        }
         // Apply red font to 80% columns in data rows only
         if (!isHeader && eightyColIndices.includes(c)) {
           cell.s.font = { ...(cell.s.font || {}), color: { rgb: 'FFC00000' } };
