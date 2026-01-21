@@ -1466,15 +1466,28 @@ function exportCurrentPivotToExcel() {
     const row = [];
     // Fill left columns, blanking repeats
     for (let i = 0; i < leftCols.length; i++) {
-      const key = leftCols[i].key;
-      const val = meta[key];
+    const key = leftCols[i].key;
+    const val = meta[key];
+
+    // Duplicate suppression only for Building, Participant, Section
+    const suppress =
+      key === state.dimCols.building ||
+      key === state.dimCols.participant ||
+      key === state.dimCols.row_type;
+
+    if (suppress) {
       if (prevVals[i] === val) {
         row.push('');
       } else {
         row.push(val);
         prevVals[i] = val;
       }
+    } else {
+      // Always show OS and Identifier
+      row.push(val);
+      prevVals[i] = val;
     }
+  }
     // Fill metric columns for each stage (mirroring grid)
     for (const s of stages) {
       const rowMap = pivot.matrix?.get(rowId);
