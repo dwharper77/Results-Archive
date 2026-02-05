@@ -24,6 +24,23 @@
   </header>
 
   <main class="app-main">
+
+    <!-- Restored Building List Section -->
+    <section id="buildingSection" class="building-section">
+      <div class="building-toolbar">
+        <label for="buildingSelect">Buildings:</label>
+        <select id="buildingSelect" multiple size="6"></select>
+        <button id="selectAllBuildings" class="btn btn-small">Select All</button>
+        <button id="clearBuildings" class="btn btn-small">Clear</button>
+      </div>
+      <div class="building-text-filter">
+        <label for="buildingText">Manual override:</label>
+        <input id="buildingText" type="text" placeholder="Paste or type building IDs, comma-separated" />
+        <button id="applyBuildingText" class="btn btn-small">Apply</button>
+        <button id="clearBuildingText" class="btn btn-small">Clear</button>
+      </div>
+    </section>
+
     <section class="status" aria-live="polite">
       <div id="statusText" class="status-text"></div>
     </section>
@@ -79,7 +96,7 @@
   </main>
 
   <footer class="app-footer muted">
-    <strong id="buildStamp">dev-208</strong>
+    <strong id="buildStamp">dev-209</strong>
   </footer>
 
 
