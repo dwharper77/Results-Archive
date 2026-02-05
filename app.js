@@ -1,3 +1,38 @@
+// Initialize building dataset from an array of JS objects
+function initializeDataset(rows) {
+  try {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      setStatus('No building data rows provided.');
+      state.columns = [];
+      state.dimCols = {};
+      state.metricCols = {};
+      state.records = [];
+      state.filteredRecords = [];
+      setExportEnabled(false);
+      return;
+    }
+
+    // Infer columns from keys of first row
+    const columns = Object.keys(rows[0]);
+    state.columns = columns;
+    state.dimCols = guessDimensionColumns(columns);
+    state.metricCols = guessMetricColumns(columns);
+    state.records = rows;
+    state.filteredRecords = rows;
+
+    recomputeKnownBuildings && recomputeKnownBuildings();
+    populateBuildingSelectOptions && populateBuildingSelectOptions();
+    syncBuildingSelectFromState && syncBuildingSelectFromState();
+    applyFilters && applyFilters();
+    buildFiltersUI && buildFiltersUI();
+    updateSectionsVisibility && updateSectionsVisibility();
+
+    setStatus(`Loaded building data: ${rows.length.toLocaleString()} rows.`);
+    setExportEnabled(true);
+  } catch (err) {
+    console.error('Failed to load building dataset', err);
+  }
+}
 // --- Color Palette ---
 const GRAY = 'FFD9D9D9';
 const GREEN = 'FF1CA45C';
