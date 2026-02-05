@@ -659,11 +659,10 @@ async function loadDefaultCorrelationData() {
   }
 }
 try {
-// Auto-load default datasets after DOM is ready
-document.addEventListener('DOMContentLoaded', async () => {
+
+(async () => {
   try {
     console.log("Auto-loading default datasets...");
-
 
     const buildingRows = await loadDefaultBuildingResults();
     if (buildingRows && buildingRows.length > 0) {
@@ -686,7 +685,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (err) {
     console.error("Auto-load failed:", err);
   }
-});
+})();
   setStatus('Ready. Load a Dataset (.pkl) to begin. Call data is optional.');
   logDebug('app.js initialized (storage startup temporarily disabled).');
   console.log('REACHED 8: BEFORE_ATTACH_FILE_INPUT_LISTENERS_CALL');
