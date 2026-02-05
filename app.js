@@ -1,3 +1,49 @@
+// --- Export Building Data to KML ---
+function exportBuildingDataToKml() {
+  if (!state.filteredRecords.length) {
+    setStatus('No building data loaded or filtered.', { error: true });
+    return;
+  }
+  // Basic KML structure for building footprints
+  const rows = state.filteredRecords;
+  const buildingCol = state.dimCols.building;
+  if (!buildingCol) {
+    setStatus('No Building column detected.', { error: true });
+    return;
+  }
+  const pieces = [];
+  pieces.push('<?xml version="1.0" encoding="UTF-8"?>');
+  pieces.push('<kml xmlns="http://www.opengis.net/kml/2.2">');
+  pieces.push('<Document>');
+  pieces.push('<name>Building Footprints</name>');
+  for (const r of rows) {
+    const b = r[buildingCol];
+    const name = b ? String(b) : 'Building';
+    pieces.push('<Placemark>');
+    pieces.push(`<name>${name}</name>`);
+    // Add more building details here if needed
+    pieces.push('</Placemark>');
+  }
+  pieces.push('</Document>');
+  pieces.push('</kml>');
+  const kml = pieces.join('\n');
+  const dt = new Date();
+  const filename = `Building_Footprints_${dt.getFullYear()}-${dt.getMonth()+1}-${dt.getDate()}_${dt.getHours()}${dt.getMinutes()}.kml`;
+  downloadTextFile({ filename, text: kml, mime: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
+  setStatus(`Exported KML: ${filename}`);
+}
+
+// Attach Export KML button event listener
+document.addEventListener('DOMContentLoaded', () => {
+  const exportKmlBtn = document.getElementById('exportKml');
+  if (exportKmlBtn) {
+    exportKmlBtn.onclick = exportBuildingDataToKml;
+  }
+  const clearFiltersBtn = document.getElementById('clearFilters');
+  if (clearFiltersBtn) {
+    clearFiltersBtn.onclick = clearAllFilters;
+  }
+});
 // Initialize building dataset from an array of JS objects
 function initializeDataset(rows) {
   try {
