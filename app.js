@@ -1,3 +1,8 @@
+// Enable/disable Export KML button for buildings
+function setExportKmlEnabled(enabled) {
+  const btn = document.getElementById('exportKml');
+  if (btn) btn.disabled = !enabled;
+}
 // --- Export Building Data to KML ---
 function exportBuildingDataToKml() {
   if (!state.filteredRecords.length) {
@@ -76,6 +81,7 @@ function initializeDataset(rows) {
 
     setStatus(`Loaded building data: ${rows.length.toLocaleString()} rows.`);
     setExportEnabled(true);
+    setExportKmlEnabled(state.filteredRecords && state.filteredRecords.length > 0);
   } catch (err) {
     console.error('Failed to load building dataset', err);
   }
@@ -2314,6 +2320,7 @@ function applyFilters() {
   updateCallLocationSourceButton();
   setCallsKmlExportEnabled(canExportCallsKml());
   updateCallViewToggleButton();
+  setExportKmlEnabled(state.filteredRecords && state.filteredRecords.length > 0);
 }
 
 function resetAfterBuildingClear() {
