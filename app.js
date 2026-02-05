@@ -26,6 +26,7 @@ function initializeDataset(rows) {
     applyFilters && applyFilters();
     buildFiltersUI && buildFiltersUI();
     updateSectionsVisibility && updateSectionsVisibility();
+    render && render();
 
     setStatus(`Loaded building data: ${rows.length.toLocaleString()} rows.`);
     setExportEnabled(true);
