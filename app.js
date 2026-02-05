@@ -56,7 +56,6 @@ window.addEventListener('unhandledrejection', function(event) {
   console.error('[GLOBAL PROMISE REJECTION]', event.reason);
 });
 console.log('REACHED 1: TOP OF FILE');
-import { unpickleDataFrameToRecords } from './pyodide-loader.js';
 import { buildPivot, renderPivotGrid } from './pivot.js';
 console.log('REACHED 2: AFTER IMPORTS');
 // --- Egnyte Modal Integration ---
@@ -166,7 +165,6 @@ console.log('REACHED 3: AFTER_EGNYTE_LISTENER_SETUP');
 
 console.log('REACHED 4: BEFORE_ELS_BLOCK');
 const els = {
-  fileInput: document.getElementById('fileInput'),
   callFileInput: document.getElementById('callFileInput'),
   statusText: document.getElementById('statusText'),
   columnsPreview: document.getElementById('columnsPreview'),
@@ -280,58 +278,9 @@ const callUi = {
 const IDB_DB_NAME = 'resultsArchive';
 const IDB_DB_VERSION = 1;
 const IDB_STORE_FILES = 'files';
-const IDB_KEY_ARCHIVE_PKL = 'archivePkl';
-const IDB_KEY_CALL_PKL = 'callPkl';
 
-const PYODIDE_CDN_URL = 'https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js';
 
-function ensureExternalScript({ url, globalName, timeoutMs = 30000 }) {
-  // If already present, no-op.
-  if (globalName && globalName in window) return Promise.resolve();
 
-  // If a script with this URL already exists, wait for it.
-  const existing = Array.from(document.scripts).find((s) => s.src === url);
-  if (existing) {
-    if (globalName && globalName in window) return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error(`Timed out loading ${url}`)), timeoutMs);
-      existing.addEventListener('load', () => {
-        clearTimeout(t);
-        resolve();
-      });
-      existing.addEventListener('error', () => {
-        clearTimeout(t);
-        reject(new Error(`Failed to load ${url}`));
-      });
-    });
-  }
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = url;
-    script.async = true;
-    const t = setTimeout(() => {
-      script.remove();
-      reject(new Error(`Timed out loading ${url}`));
-    }, timeoutMs);
-    script.onload = () => {
-      clearTimeout(t);
-      resolve();
-    };
-    script.onerror = () => {
-      clearTimeout(t);
-      reject(new Error(`Failed to load ${url}`));
-    };
-    document.head.appendChild(script);
-  });
-}
-
-async function ensurePyodideAvailable() {
-  // loadPyodide is provided by pyodide.js
-  if ('loadPyodide' in window) return;
-  logDebug('Pyodide global not found; injecting pyodide.js…');
-  await ensureExternalScript({ url: PYODIDE_CDN_URL, globalName: 'loadPyodide', timeoutMs: 60000 });
-}
 
 function formatBytes(n) {
   const num = Number(n);
@@ -618,42 +567,42 @@ function initializeCallDataFromRows(rows) {
   // rows is already an array of JS objects
   // Reuse the same logic that runs after the pickle is converted to JSON
   // This should match the post-processing in loadCallDatasetFromBytes
-  if (!Array.isArray(rows) || rows.length === 0) {
-    setStatus('No call data rows provided.');
-    callState.columns = [];
-    callState.dimCols = {};
-    callState.records = [];
-    callState.filteredRecords = [];
-    callState.lastFileInfo = null;
-    setCallsExportEnabled(false);
-    setCallsKmlExportEnabled(false);
+  try {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      setStatus('No call data rows provided.');
+      callState.columns = [];
+      callState.dimCols = {};
+      callState.records = [];
+      callState.filteredRecords = [];
+      callState.lastFileInfo = null;
+      setCallsExportEnabled(false);
+      return;
+    }
+
+    // Infer columns from keys of first row
+    const columns = Object.keys(rows[0]);
+    callState.columns = columns;
+    callState.dimCols = guessCallDimensionColumns(columns);
+    callState.records = rows;
+    callState.filteredRecords = rows;
+    callState.lastFileInfo = { name: 'DefaultCorrelationData', size: rows.length, lastModified: Date.now(), type: 'application/json' };
+
+    recomputeKnownBuildings && recomputeKnownBuildings();
+    populateBuildingSelectOptions && populateBuildingSelectOptions();
+    syncBuildingSelectFromState && syncBuildingSelectFromState();
+    applyFilters && applyFilters();
+    buildFiltersUI && buildFiltersUI();
+    updateSectionsVisibility && updateSectionsVisibility();
+
+    setStatus(`Loaded call data: ${rows.length.toLocaleString()} rows.`);
+    setCallsExportEnabled(true);
+    setCallsKmlExportEnabled(canExportCallsKml && canExportCallsKml());
     updateCallLocationSourceButton && updateCallLocationSourceButton();
     updateCallViewToggleButton && updateCallViewToggleButton();
     updateSectionsVisibility && updateSectionsVisibility();
-    return;
+  } catch (err) {
+    console.error("Failed to load Correlation All.xlsx", err);
   }
-
-  // Infer columns from keys of first row
-  const columns = Object.keys(rows[0]);
-  callState.columns = columns;
-  callState.dimCols = guessCallDimensionColumns(columns);
-  callState.records = rows;
-  callState.filteredRecords = rows;
-  callState.lastFileInfo = { name: 'DefaultCorrelationData', size: rows.length, lastModified: Date.now(), type: 'application/json' };
-
-  recomputeKnownBuildings && recomputeKnownBuildings();
-  populateBuildingSelectOptions && populateBuildingSelectOptions();
-  syncBuildingSelectFromState && syncBuildingSelectFromState();
-  applyFilters && applyFilters();
-  buildFiltersUI && buildFiltersUI();
-  updateSectionsVisibility && updateSectionsVisibility();
-
-  setStatus(`Loaded call data: ${rows.length.toLocaleString()} rows.`);
-  setCallsExportEnabled(true);
-  setCallsKmlExportEnabled(canExportCallsKml && canExportCallsKml());
-  updateCallLocationSourceButton && updateCallLocationSourceButton();
-  updateCallViewToggleButton && updateCallViewToggleButton();
-  updateSectionsVisibility && updateSectionsVisibility();
 }
 
   } catch (err) {
@@ -661,69 +610,6 @@ function initializeCallDataFromRows(rows) {
   }
 })();
 
-
-
-function setGridZoom(value) {
-  const v = Number(value);
-  if (!Number.isFinite(v)) return;
-  const clamped = Math.max(0.5, Math.min(1, v));
-  document.documentElement.style.setProperty('--grid-zoom', String(clamped));
-}
-
-// Restore grid zoom preference early.
-/*
-try {
-  const saved = localStorage.getItem('resultsArchive.gridZoom');
-  if (saved) setGridZoom(saved);
-} catch {
-  // ignore
-}
-*/
-
-console.log('REACHED 8: AFTER_STORAGE_STARTUP');
-
-// ...existing code...
-
-// Loads Building Results from the default Excel file
-async function loadDefaultBuildingResults() {
-  try {
-    const resp = await fetch('./Building Results.xlsx');
-    const buf = await resp.arrayBuffer();
-    const workbook = XLSX.read(buf, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet);
-
-    console.log("Loaded Building Results:", rows.length, "rows");
-    return rows;
-  } catch (err) {
-    console.error("Failed to load Building Results.xlsx", err);
-  }
-}
-
-// Loads Correlation Data from the default Excel file
-async function loadDefaultCorrelationData() {
-  try {
-    const resp = await fetch('./Correlation All.xlsx');
-    const buf = await resp.arrayBuffer();
-    const workbook = XLSX.read(buf, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet);
-
-    console.log("Loaded Correlation Data:", rows.length, "rows");
-    return rows;
-  } catch (err) {
-    console.error("Failed to load Correlation All.xlsx", err);
-  }
-}
-try {
-
-
-  setStatus('Ready. Load a Dataset (.pkl) to begin. Call data is optional.');
-  logDebug('app.js initialized (storage startup temporarily disabled).');
-  console.log('REACHED 8: BEFORE_ATTACH_FILE_INPUT_LISTENERS_CALL');
-} catch (err) {
-  console.error('[DIAG] Error after REACHED 8:', err);
-}
 
 // ...existing code...
 
@@ -2867,6 +2753,13 @@ function render() {
 }
 
 async function onFileSelected(file) {
+
+  // Prevent accidental startup triggers or empty events
+  if (!(file instanceof File)) {
+    console.log("[DIAG] onFileSelected ignored — no real file provided");
+    return;
+  }
+
   enableControls(false);
   setStatus('Reading file…');
   logDebug(`[onFileSelected] File selected: ${file?.name ?? '(unknown)'} (${file?.size ?? 0} bytes, type=${file?.type ?? 'unknown'})`);
@@ -3275,7 +3168,6 @@ function attachFileInputListeners() {
       }
       console.log('[app] file selected:', file.name, file.size, file.type);
       if (els.debugLog) els.debugLog.textContent += `\n[app] file selected: ${file.name} (${file.size} bytes)`;
-      onFileSelected(file); // file input handler, do not wrap
     } catch (err) {
       console.error('[app] error in fileChangeHandler', err);
       if (els.debugLog) els.debugLog.textContent += `\n[app] error in fileChangeHandler: ${err?.message ?? err}`;
