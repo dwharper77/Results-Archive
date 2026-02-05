@@ -3132,64 +3132,8 @@ if (els.clearBuildings && els.buildingSelect) {
 
 
 
-// File input events — attach in a function and call on DOMContentLoaded as well
-// ...existing code...
-function attachFileInputListeners() {
-  console.log('[DIAG] attachFileInputListeners called');
-  if (!els.fileInput) {
-    console.log('[DIAG] attachFileInputListeners: els.fileInput is missing, returning early');
-    setStatus('App initialization: file input not found in DOM yet. Will retry on DOMContentLoaded.');
-    logDebug('Notice: #fileInput not found yet; delaying listener attachment.');
-    return;
-  }
 
-  console.log('[app] attaching fileInput listeners, element=', els.fileInput);
-  console.log('REACHED FILE INPUT HANDLER SETUP');
-  if (els.fileInput.__listenersAttached) {
-    console.log('[DIAG] attachFileInputListeners: listeners already attached, returning early');
-    return;
-  }
 
-  els.fileInput.addEventListener('click', () => {
-    console.log('[app] fileInput clicked');
-    if (els.debugLog) els.debugLog.textContent += `\n[app] fileInput clicked`;
-    try { els.fileInput.value = ''; } catch (e) { console.warn(e); }
-  });
-
-  const fileChangeHandler = (ev) => {
-    try {
-      console.log('[app] fileInput change/input event fired', ev);
-      if (els.debugLog) els.debugLog.textContent += `\n[app] fileInput change/input event fired`;
-      const file = els.fileInput.files?.[0];
-      if (!file) {
-        console.log('[app] No file selected in fileInput change event.');
-        if (els.debugLog) els.debugLog.textContent += `\n[app] No file selected in fileInput change event.`;
-        return;
-      }
-      console.log('[app] file selected:', file.name, file.size, file.type);
-      if (els.debugLog) els.debugLog.textContent += `\n[app] file selected: ${file.name} (${file.size} bytes)`;
-    } catch (err) {
-      console.error('[app] error in fileChangeHandler', err);
-      if (els.debugLog) els.debugLog.textContent += `\n[app] error in fileChangeHandler: ${err?.message ?? err}`;
-    }
-  };
-
-  console.log('REACHED FILE INPUT HANDLER SETUP');
-  els.fileInput.addEventListener('change', function(event) {
-    console.log('FILE INPUT CHANGED', event.target.files);
-    return fileChangeHandler(event);
-  });
-  els.fileInput.addEventListener('input', function(event) {
-    console.log('FILE INPUT CHANGED', event.target.files);
-    return fileChangeHandler(event);
-  });
-  els.fileInput.__listenersAttached = true;
-}
-
-// Try to attach immediately, and also on DOMContentLoaded in case elements were not ready
-console.log('REACHED 8: BEFORE_ATTACH_FILE_INPUT_LISTENERS_CALL');
-attachFileInputListeners();
-window.addEventListener('DOMContentLoaded', () => attachFileInputListeners());
 
 // Call-data file input events
 if (els.callFileInput) {
