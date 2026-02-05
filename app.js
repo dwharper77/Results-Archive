@@ -602,7 +602,9 @@ console.log('REACHED 7: BEFORE_CLEAR_PKLS_IIFE');
       // Convert buildingRows to a Blob and File-like object for onFileSelected
       const buildingBlob = new Blob([JSON.stringify(buildingRows)], { type: 'application/json' });
       const buildingFile = new File([buildingBlob], 'DefaultBuildingResults.json', { type: 'application/json' });
-      await onFileSelected(buildingFile);
+      if (buildingFile instanceof File) {
+        await onFileSelected(buildingFile);
+      }
       console.log("Default building dataset loaded:", buildingRows.length, "rows");
     }
 
@@ -3273,7 +3275,7 @@ function attachFileInputListeners() {
       }
       console.log('[app] file selected:', file.name, file.size, file.type);
       if (els.debugLog) els.debugLog.textContent += `\n[app] file selected: ${file.name} (${file.size} bytes)`;
-      onFileSelected(file);
+      onFileSelected(file); // file input handler, do not wrap
     } catch (err) {
       console.error('[app] error in fileChangeHandler', err);
       if (els.debugLog) els.debugLog.textContent += `\n[app] error in fileChangeHandler: ${err?.message ?? err}`;
