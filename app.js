@@ -594,13 +594,29 @@ console.log('REACHED 7: BEFORE_CLEAR_PKLS_IIFE');
 
 (async () => {
   try {
-    if (els.lastDatasetInfo) els.lastDatasetInfo.textContent = '';
-    if (els.lastCallDatasetInfo) els.lastCallDatasetInfo.textContent = '';
-    await idbDeletePkl(IDB_KEY_ARCHIVE_PKL);
-    await idbDeletePkl(IDB_KEY_CALL_PKL);
-    logDebug('Cleared any previously saved PKLs (previous-session restore disabled).');
-  } catch {
-    // ignore
+    console.log("AUTOLOAD IIFE EXECUTED");
+    console.log("Auto-loading default datasets...");
+
+    const buildingRows = await loadDefaultBuildingResults();
+    if (buildingRows && buildingRows.length > 0) {
+      // Convert buildingRows to a Blob and File-like object for onFileSelected
+      const buildingBlob = new Blob([JSON.stringify(buildingRows)], { type: 'application/json' });
+      const buildingFile = new File([buildingBlob], 'DefaultBuildingResults.json', { type: 'application/json' });
+      await onFileSelected(buildingFile);
+      console.log("Default building dataset loaded:", buildingRows.length, "rows");
+    }
+
+    const callRows = await loadDefaultCorrelationData();
+    if (callRows && callRows.length > 0) {
+      // Convert callRows to a Blob and File-like object for onCallFileSelected
+      const callBlob = new Blob([JSON.stringify(callRows)], { type: 'application/json' });
+      const callFile = new File([callBlob], 'DefaultCorrelationData.json', { type: 'application/json' });
+      await onCallFileSelected(callFile);
+      console.log("Default call dataset loaded:", callRows.length, "rows");
+    }
+
+  } catch (err) {
+    console.error("Auto-load failed:", err);
   }
 })();
 
