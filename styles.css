@@ -110,6 +110,122 @@ input[type="file"], input[type="text"], select {
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79,140,255,0.15) inset; }
 
+/* --- Main Layout --- */
+.app-main {
+  padding: 16px max(16px, calc((100vw - 1200px) / 2));
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.app-title h1 {
+  margin: 0; font-size: 1.5em; font-weight: 700;
+}
+
+.app-footer {
+  text-align: center; padding: 20px; 
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}
+
+/* --- Status & Details Sections --- */
+.status {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px;
+}
+
+.status-text {
+  font-size: 14px; margin-bottom: 12px;
+}
+
+.status-details {
+  margin-top: 12px;
+}
+
+.status-details summary {
+  cursor: pointer; font-weight: 600; padding: 8px 0;
+  user-select: none; color: var(--accent);
+}
+
+.status-details summary:hover {
+  color: var(--text);
+}
+
+/* --- Grid Card --- */
+.grid-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+}
+
+.grid-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 12px;
+}
+
+.grid-tools {
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+}
+
+.placeholder {
+  padding: 40px; text-align: center; color: var(--muted);
+  font-size: 14px; font-style: italic;
+}
+
+/* --- Building Picker --- */
+.building-picker {
+  display: flex; flex-direction: column; gap: 8px;
+}
+
+.building-picker-head {
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.building-picker-actions {
+  display: flex; gap: 6px;
+}
+
+.building-text-actions {
+  display: flex; gap: 6px; align-items: stretch;
+}
+
+.building-text-actions input {
+  flex: 1; min-width: 0;
+}
+
+.building-text-actions button {
+  white-space: nowrap;
+}
+
+/* --- Filters --- */
+.filters {
+  display: grid; gap: 12px; margin-top: 12px;
+}
+
+.filters-actions {
+  margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;
+}
+
+/* --- File Input --- */
+.file {
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+.file-row {
+  display: flex; gap: 8px; align-items: center;
+}
+
+.label {
+  font-weight: 600; font-size: 13px; display: block;
+}
+
+/* --- Button Variants --- */
+.btn-small {
+  padding: 6px 10px; font-size: 12px;
+}
+
+/* --- Modal Title --- */
+.modal-title {
+  margin: 0 0 1em; font-size: 1.2em; font-weight: 700;
+}
+
 /* --- Responsive --- */
 @media (min-width: 981px) {
   .app-controls { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
