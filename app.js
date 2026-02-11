@@ -3208,24 +3208,25 @@ if (els.callFileInput) {
  */
 (async () => {
   try {
-    console.log("Starting Auto-Load Sequence...");
+    console.log("Starting Sequential Auto-Load...");
 
-    // 1. Load the Building Results (Archive)
-    const buildingFilename = 'Building Results.pkl'; // Ensure this matches your actual file
+    // 1. Load Buildings FIRST
+    const buildingFilename = 'Building Results.pkl'; 
     const resB = await fetch(`./${buildingFilename}`);
     
     if (resB.ok) {
       const blobB = await resB.blob();
       const fileB = new File([blobB], buildingFilename, { type: "application/octet-stream" });
       
-      console.log("Auto-loading Building Archive...");
-      await onFileSelected(fileB); 
-    } else {
-      console.warn(`${buildingFilename} not found in root.`);
+      console.log("Processing Building Archive...");
+      await onFileSelected(fileB); // WAIT for this to finish entirely
+      
+      // FORCE ENABLE the controls if they are still stuck
+      if (typeof enableControls === 'function') enableControls(true);
+      if (els.buildingSelect) els.buildingSelect.disabled = false;
     }
 
-    // 2. Load the Correlation Data (Optional Call Data)
-    // If your backup has a similar function for calls, e.g., onCallFileSelected(file)
+    // 2. Load Correlation SECOND
     const callFilename = 'Correlation All.xlsx'; 
     const resC = await fetch(`./${callFilename}`);
     
@@ -3233,15 +3234,15 @@ if (els.callFileInput) {
       const blobC = await resC.blob();
       const fileC = new File([blobC], callFilename, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       
-      console.log("Auto-loading Call Data...");
-      // Replace with your backup's actual call-loading function name:
+      console.log("Processing Call Data...");
       if (typeof onCallFileSelected === 'function') {
         await onCallFileSelected(fileC);
+      } else {
+        console.error("Could not find function 'onCallFileSelected'. Check the name in your backup!");
       }
     }
 
   } catch (err) {
-    console.error("Auto-load failed during startup:", err);
-    logDebug(`Auto-load failed: ${err.message}`);
+    console.error("Auto-load failed:", err);
   }
 })();
