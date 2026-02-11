@@ -30,22 +30,23 @@
   </div>
 
     <div class="app-controls">
-      <label class="file">
-        <span class="label">Load Building Results.pkl</span>
-        <div class="file-row">
-          <input id="fileInput" type="file" accept=".pkl,.pickle,application/octet-stream" />
-        </div>
-        <div id="lastDatasetInfo" class="muted small"></div>
-      </label>
+    <label class="file hidden-autoload">
+      <span class="label">Load Building Results.pkl</span>
+      <div class="file-row">
+        <input id="fileInput" type="file" accept=".pkl,.pickle,application/octet-stream" />
+      </div>
+      <div id="lastDatasetInfo" class="muted small"></div>
+    </label>
 
-      <label class="file">
-        <span class="label">Load Correlated Calls.pkl</span>
-        <div class="file-row">
-          <input id="callFileInput" type="file" accept=".pkl,.pickle,application/octet-stream" />
-        </div>
-        <div class="muted small">Optional: load only if you want Call Data exports (Excel/KML).</div>
-        <div id="lastCallDatasetInfo" class="muted small"></div>
-      </label>
+    <label class="file hidden-autoload">
+      <span class="label">Load Correlated Calls.pkl</span>
+      <div class="file-row">
+        <input id="callFileInput" type="file" accept=".pkl,.pickle,application/octet-stream" />
+      </div>
+      <div class="muted small">Optional: load only if you want Call Data exports (Excel/KML).</div>
+      <div id="lastCallDatasetInfo" class="muted small"></div>
+    </label>
+  </div>
 
       <div class="building-picker">
         <div class="building-picker-head">
