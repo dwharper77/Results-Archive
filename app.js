@@ -2982,16 +2982,26 @@ async function onCallFileSelected(file) {
   setStatus('Reading call data file…');
   logDebug(`Call file selected: ${file?.name ?? '(unknown)'} (${file?.size ?? 0} bytes)`);
 
+  // Only XLSX files supported
   const buf = await file.arrayBuffer();
-  const bytes = new Uint8Array(buf);
-  const fileInfo = {
+  const XLSX = window.XLSX;
+  if (!XLSX) throw new Error('XLSX library not loaded.');
+  const workbook = XLSX.read(buf, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const records = XLSX.utils.sheet_to_json(worksheet, { defval: null });
+  const columns = records.length > 0 ? Object.keys(records[0]) : [];
+  callState.columns = columns;
+  callState.records = records;
+  callState.lastFileInfo = {
     name: file?.name ?? '',
     size: file?.size ?? 0,
     lastModified: file?.lastModified ?? 0,
     type: file?.type ?? '',
   };
-
-  await loadCallDatasetFromBytes({ bytes, fileInfo, saveToIdb: false, idbFile: null });
+  setStatus(`Loaded call data: ${records.length.toLocaleString()} rows.`);
+  logDebug(`[onCallFileSelected] XLSX loaded: ${records.length} rows, ${columns.length} columns.`);
+  // ...update UI and state as needed...
 }
 
 
