@@ -203,6 +203,74 @@ input[type="file"], input[type="text"], select {
   margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap;
 }
 
+.filter-btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  color: var(--text); cursor: pointer; transition: 0.15s;
+}
+
+.filter-btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(79,140,255,0.15) inset;
+}
+
+.filter-name {
+  font-weight: 600; font-size: 13px;
+}
+
+.filter-badge {
+  font-size: 11px; color: var(--muted);
+  border: 1px solid var(--border); padding: 3px 8px; border-radius: 999px;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+/* --- Multi-select Picker --- */
+.picker-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(11, 18, 32, 0.85);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+
+.picker {
+  width: min(720px, 92vw); max-height: min(80vh, 720px);
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 16px; box-shadow: 0 12px 40px #000a;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+.picker-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.picker-title {
+  font-size: 15px; font-weight: 700;
+}
+
+.picker-body {
+  display: grid; gap: 10px; padding: 14px 16px;
+}
+
+.picker-toolbar {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+
+.picker-select {
+  width: 100%;
+  min-height: 280px;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 6px; font-family: var(--sans);
+}
+
+.picker-actions {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 12px 16px; border-top: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.8);
+}
+
 /* --- File Input --- */
 .file {
   display: flex; flex-direction: column; gap: 6px;
