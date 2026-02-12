@@ -2468,13 +2468,8 @@ function buildFiltersUI() {
     const callCol = callState.dimCols?.[logicalKey];
     if (!archiveCol && !callCol) return false;
 
-    // For 'stage', use filtered records so the filter matches what's in the viewer.
-    // For other filters, use building-scoped records to show all available options.
-    const archiveSource = (logicalKey === 'stage') ? state.filteredRecords : buildingScopedArchive;
-    const callSource = (logicalKey === 'stage') ? callState.filteredRecords : buildingScopedCalls;
-
-    const archiveValues = archiveCol ? uniqSortedValues(archiveSource, archiveCol) : [];
-    const callValues = callCol ? uniqSortedValues(callSource, callCol) : [];
+    const archiveValues = archiveCol ? uniqSortedValues(buildingScopedArchive, archiveCol) : [];
+    const callValues = callCol ? uniqSortedValues(buildingScopedCalls, callCol) : [];
     let values = unionValues(archiveValues, callValues);
     if (!values.length) return false;
 
@@ -2728,10 +2723,17 @@ function render() {
     valueKey: metricKeys,
   });
 
+  console.log('[DEBUG] Pivot columns (all stages found):', pivot.cols);
+  console.log('[DEBUG] Number of filtered records sent to pivot:', state.filteredRecords.length);
+
   // Filter pivot columns by selected stages (if any).
   const selectedStages = state.filters.stage;
+  console.log('[DEBUG] Selected stages filter:', selectedStages ? Array.from(selectedStages) : 'None (All)');
+  
   if (selectedStages && selectedStages.size > 0) {
+    const beforeFilter = pivot.cols.length;
     pivot.cols = pivot.cols.filter((col) => selectedStages.has(col));
+    console.log('[DEBUG] Filtered columns from', beforeFilter, 'to', pivot.cols.length, ':', pivot.cols);
   }
 
   // Ensure results rows follow the same preferred Section ordering used in the filters UI.
