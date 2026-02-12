@@ -1890,7 +1890,7 @@ function guessCallDimensionColumns(columns) {
 
 function toKey(v) {
   if (v === null || v === undefined) return '';
-  return String(v);
+  return String(v).trim();
 }
 
 function uniqSortedValues(records, colName, limit = 5000) {
@@ -2159,7 +2159,8 @@ function applyFilters() {
     return;
   }
 
-  const active = getActiveFilters([]);
+  // Exclude 'stage' from row filtering; it's used for column selection in the pivot.
+  const active = getActiveFilters(['stage']);
   let out = active.length ? filterRecordsWithActive(state.records, active) : state.records;
 
   // Section-specific ID filters: only apply when Section filter is explicitly set.
@@ -2714,8 +2715,14 @@ function render() {
     return;
   }
 
+  // Filter pivot columns by selected stages (if any).
+  const selectedStages = state.filters.stage;
+  const recordsForPivot = (selectedStages && selectedStages.size > 0)
+    ? state.filteredRecords.filter((r) => selectedStages.has(toKey(r?.[colKey])))
+    : state.filteredRecords;
+
   const pivot = buildPivot({
-    records: state.filteredRecords,
+    records: recordsForPivot,
     rowKey: rowKeys,
     colKey,
     valueKey: metricKeys,
@@ -3135,7 +3142,7 @@ if (els.buildingSelect) {
     }
 
     logDebug(`Building selection changed: ${state.filters.building.size}`);
-    setStatus(state.filters.building.size ? 'Building selection applied.' : 'Select building(s) above to begin.');
+    setStatus(state.filters.building.size ? 'Building selection applied.' : '');
 
     applyFilters();
     buildFiltersUI();
