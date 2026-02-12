@@ -2487,6 +2487,11 @@ function buildFiltersUI() {
     let values = unionValues(archiveValues, callValues);
     if (!values.length) return false;
 
+    if (logicalKey === 'stage') {
+      console.log('[DEBUG renderStandardFilter] Stage filter values:', values);
+      console.log('[DEBUG renderStandardFilter] buildingScopedArchive count:', buildingScopedArchive.length);
+    }
+
     if (logicalKey === 'row_type') {
       values = sortByPreferredOrder(values, SECTION_ORDER);
     }
@@ -3286,15 +3291,15 @@ if (els.callFileInput) {
   try {
     console.log("Starting Auto-Load Sequence...");
 
-    // 1. Load Building Results (The PKL file via Pyodide)
-    const buildingPath = './Building Results.pkl';
+    // 1. Load Building Results (The XLSX file)
+    const buildingPath = './Building Results.xlsx';
     const resB = await fetch(buildingPath);
     if (resB.ok) {
       const blobB = await resB.blob();
-      const fileB = new File([blobB], "Building Results.pkl");
-      console.log("Loading Building Pickle...");
+      const fileB = new File([blobB], "Building Results.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      console.log("Loading Building Results.xlsx...");
       
-      // We await this to ensure Pyodide finishes before moving to Excel
+      // We await this to ensure loading finishes before moving to Correlation
       await onFileSelected(fileB); 
       
       // Explicitly wake up the UI in case onFileSelected didn't trigger it
@@ -3302,7 +3307,7 @@ if (els.callFileInput) {
       if (els.buildingSelect) els.buildingSelect.disabled = false;
       console.log("Building data loaded. UI enabled.");
     } else {
-      console.warn("Building Results.pkl not found.");
+      console.warn("Building Results.xlsx not found.");
     }
 
     // 2. Load Correlation (The XLSX file)
