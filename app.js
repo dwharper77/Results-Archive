@@ -2099,7 +2099,7 @@ function applyBuildingTextFilter() {
   buildFiltersUI();
   render();
   updateSectionsVisibility();
-  setStatus(state.filters.building.size ? 'Building selection applied.' : 'Select building(s) above to begin.');
+  setStatus(state.filters.building.size ? 'Building selection applied.' : '');
 }
 
 function clearBuildingTextFilter() {
@@ -2110,7 +2110,7 @@ function clearBuildingTextFilter() {
   buildFiltersUI();
   render();
   updateSectionsVisibility();
-  setStatus('Building selection cleared. Select building(s) above to begin.');
+  setStatus('Building selection cleared. ');
 }
 
 function getRowHeaderCols() {
@@ -2227,7 +2227,7 @@ function resetAfterBuildingClear() {
   render();
   updateSectionsVisibility();
 
-  setStatus('Building selection cleared. Select building(s) above to begin.');
+  setStatus('Building selection cleared. ');
 }
 
 function clearAllFilters() {
@@ -2848,7 +2848,7 @@ async function onFileSelected(file) {
     enableControls(true);
     if (els.zoomSelect) els.zoomSelect.disabled = false;
     setExportEnabled(false);
-    setStatus(`Loaded ${state.records.length.toLocaleString()} rows. Select building(s) above to begin.`);
+    setStatus(`Loaded ${state.records.length.toLocaleString()} rows. `);
     logDebug(`[onFileSelected] Loaded ${state.records.length} rows, ${state.columns.length} columns.`);
 
     render();
