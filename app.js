@@ -2161,7 +2161,20 @@ function applyFilters() {
 
   // Exclude 'stage' from row filtering; it's used for column selection in the pivot.
   const active = getActiveFilters(['stage']);
+  console.log('[DEBUG applyFilters] Active filters (excluding stage):', active.map(([k, set]) => `${k}=${Array.from(set).join(',')}`));
+  console.log('[DEBUG applyFilters] state.records count:', state.records.length);
+  
   let out = active.length ? filterRecordsWithActive(state.records, active) : state.records;
+  console.log('[DEBUG applyFilters] After filterRecordsWithActive:', out.length, 'records');
+  
+  // Check what stages are in state.records vs filtered
+  const stageCol = state.dimCols.stage;
+  if (stageCol) {
+    const stagesInSource = new Set(state.records.map(r => toKey(r?.[stageCol])).filter(Boolean));
+    const stagesAfterFilter = new Set(out.map(r => toKey(r?.[stageCol])).filter(Boolean));
+    console.log('[DEBUG applyFilters] Stages in state.records:', Array.from(stagesInSource).sort());
+    console.log('[DEBUG applyFilters] Stages after filtering:', Array.from(stagesAfterFilter).sort());
+  }
 
   // Section-specific ID filters: only apply when Section filter is explicitly set.
   const sectionCol = state.dimCols.row_type;
@@ -2194,6 +2207,7 @@ function applyFilters() {
   }
 
   state.filteredRecords = out;
+  console.log('[DEBUG applyFilters] Final state.filteredRecords count:', state.filteredRecords.length);
 
   // Apply the same filter sets to call data (only for columns present in callState.dimCols).
   if (callState.records.length) {
