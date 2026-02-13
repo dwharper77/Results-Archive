@@ -3323,24 +3323,13 @@ if (els.callFileInput) {
       }
 
       const blobC = await resC.blob();
-      const arrayBuffer = await blobC.arrayBuffer();
-      const data = new Uint8Array(arrayBuffer);
+      const fileC = new File([blobC], "Correlation All.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       
-      // Parse the Excel file directly here to bypass the Pickle error
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
-      
-      console.log(`Parsed ${rows.length} correlation rows.`);
-
-      // Direct injection into your backup's data handler
-      if (typeof initializeCallDataFromRows === 'function') {
-        initializeCallDataFromRows(rows);
-      } else if (typeof onCallFileSelected === 'function') {
-        // If the above doesn't exist, try the file handler 
-        // but manually ensure it doesn't think it's a pickle
-        const fileC = new File([blobC], "Correlation All.xlsx", { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      console.log(`[Auto-Load] Calling onCallFileSelected...`);
+      if (typeof onCallFileSelected === 'function') {
         await onCallFileSelected(fileC);
+      } else {
+        console.error("onCallFileSelected function not found");
       }
       
       console.log("Correlation data initialization complete.");
