@@ -3047,6 +3047,9 @@ async function onCallFileSelected(file) {
   logDebug(`[onCallFileSelected] Raw columns: ${columns.join(', ')}`);
   logDebug(`[onCallFileSelected] Detected dimCols: ${JSON.stringify(callState.dimCols)}`);
   logDebug(`Correlation data initialization complete.`);
+  console.log(`[onCallFileSelected] XLSX loaded: ${records.length} rows, ${columns.length} columns.`);
+  console.log(`[onCallFileSelected] Raw columns: ${columns.join(', ')}`);
+  console.log(`[onCallFileSelected] Detected dimCols:`, callState.dimCols);
   
   // Update UI and apply filters
   applyFilters();
