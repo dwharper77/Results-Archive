@@ -1182,6 +1182,7 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
   pieces.push('<Style id="lineOk"><LineStyle><color>ff00ff00</color><width>2</width></LineStyle></Style>');
   pieces.push('<Style id="lineBad"><LineStyle><color>ff0000ff</color><width>2</width></LineStyle></Style>');
 
+  const buildingCol = c.building;
   const participantCol = c.participant;
   const stageCol = c.stage;
   const locationSourceCol = c.location_source;
