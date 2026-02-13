@@ -2135,6 +2135,8 @@ function applyFilters() {
 
   // Exclude 'stage' from row filtering; it's used for column selection in the pivot.
   const active = getActiveFilters(['stage']);
+  // For call data, include stage so correlation mirrors results viewer filters.
+  const callActive = getActiveFilters([]);
   console.log('[DEBUG applyFilters] Active filters (excluding stage):', active.map(([k, set]) => `${k}=${Array.from(set).join(',')}`));
   console.log('[DEBUG applyFilters] state.records count:', state.records.length);
   
@@ -2186,7 +2188,7 @@ function applyFilters() {
   // Apply the same filter sets to call data (only for columns present in callState.dimCols).
   if (callState.records.length) {
     const scopedCalls = buildingScopedRecordsByDim(callState.records, callState.dimCols);
-    const callOut = active.length ? filterRecordsWithActiveByDim(scopedCalls, active, callState.dimCols) : scopedCalls;
+    const callOut = callActive.length ? filterRecordsWithActiveByDim(scopedCalls, callActive, callState.dimCols) : scopedCalls;
     callState.filteredRecords = callOut;
   } else {
     callState.filteredRecords = [];
