@@ -1396,6 +1396,15 @@ async function exportCallsToKml() {
   const stageCol = callState.dimCols.stage;
   const locationSourceCol = callState.dimCols.location_source;
 
+  const normalizeTestType = (value) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    const lower = raw.toLowerCase();
+    if (lower === 'original') return 'Original';
+    if (lower === 'retest') return 'Retest';
+    return raw;
+  };
+
   const summarizeBy = (inRows, colName) => {
     const out = {};
     if (!colName) return out;
@@ -1421,7 +1430,7 @@ async function exportCallsToKml() {
   if (buildingCol) {
     for (const row of rows) {
       const building = String(row?.[buildingCol] ?? 'Building').trim() || 'Building';
-      const testType = testTypeCol ? String(row?.[testTypeCol] ?? '').trim() : null;
+      const testType = testTypeCol ? normalizeTestType(row?.[testTypeCol]) : '';
       
       if (!buildingGroups[building]) buildingGroups[building] = {};
       const typeKey = testType || 'All';
@@ -1989,6 +1998,7 @@ function guessCallDimensionColumns(columns) {
   return {
     participant: detectColumn(columns, ['participant', 'carrier', 'name', 'user', 'person']),
     stage: detectColumn(columns, ['stage', 'stg', 'phase']),
+    test_type: detectColumn(columns, ['test_type', 'test type', 'testtype', 'run type', 'original/retest']),
     building: detectColumn(columns, [
       'building_id',
       'building id',
