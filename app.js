@@ -1197,7 +1197,17 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
   const buildingCol = c.building;
   const participantCol = c.participant;
   const stageCol = c.stage;
+  const testTypeCol = c.test_type;
   const locationSourceCol = c.location_source;
+
+  const normalizeKmlTestType = (value) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return '';
+    const lower = raw.toLowerCase();
+    if (lower === 'original') return 'Original';
+    if (lower === 'retest') return 'Retest';
+    return raw;
+  };
 
   const addCount = (obj, key, inc = 1) => {
     const k = toKey(key) || '(blank)';
@@ -1289,6 +1299,7 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
 
     const buildingVal = buildingCol ? toKey(r?.[buildingCol]) : '';
     const stageVal = c.stage ? toKey(r?.[c.stage]) : '';
+    const testTypeVal = testTypeCol ? normalizeKmlTestType(r?.[testTypeCol]) : '';
     const participantVal = c.participant ? toKey(r?.[c.participant]) : '';
     const pathVal = c.path_id ? toKey(r?.[c.path_id]) : '';
     const pointVal = c.point_id ? toKey(r?.[c.point_id]) : '';
@@ -1296,12 +1307,14 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
     const nameBits = [];
     if (buildingVal) nameBits.push(buildingVal);
     if (stageVal) nameBits.push(stageVal);
+    if (testTypeVal === 'Retest') nameBits.push('Retest');
     if (pointVal) nameBits.push(pointVal);
     const placemarkName = nameBits.length ? nameBits.join(' • ') : 'Call Vector';
 
     const descLines = [];
     if (buildingVal) descLines.push(`Building: ${buildingVal}`);
     if (stageVal) descLines.push(`Stage: ${stageVal}`);
+    if (testTypeVal) descLines.push(`Test Type: ${testTypeVal}`);
     if (participantVal) descLines.push(`Participant: ${participantVal}`);
     if (pathVal) descLines.push(`Path ID: ${pathVal}`);
     if (pointVal) descLines.push(`Point ID: ${pointVal}`);
@@ -1428,10 +1441,54 @@ async function exportCallsToKml() {
   // Group records by building, then by test type
   const buildingGroups = {};
   if (buildingCol) {
+    const buildingProfiles = {};
+
+    const getBuildingProfile = (building) => {
+      if (!buildingProfiles[building]) {
+        buildingProfiles[building] = {
+          hasExplicitOriginal: false,
+          hasExplicitRetest: false,
+          hasOemStage: false,
+          hasNonOemStage: false,
+        };
+      }
+      return buildingProfiles[building];
+    };
+
+    // Pass 1: learn per-building characteristics for robust Original/Retest splitting.
     for (const row of rows) {
       const building = String(row?.[buildingCol] ?? 'Building').trim() || 'Building';
+      const profile = getBuildingProfile(building);
+
       const testType = testTypeCol ? normalizeTestType(row?.[testTypeCol]) : '';
-      
+      if (testType === 'Original') profile.hasExplicitOriginal = true;
+      if (testType === 'Retest') profile.hasExplicitRetest = true;
+
+      const stageVal = stageCol ? toKey(row?.[stageCol]).toLowerCase() : '';
+      if (stageVal === 'oem') profile.hasOemStage = true;
+      else if (stageVal) profile.hasNonOemStage = true;
+    }
+
+    try {
+      logDebug(`[KML DEBUG] Building profiles: ${JSON.stringify(buildingProfiles)}`);
+    } catch {
+      // ignore debug logging errors
+    }
+
+    // Pass 2: assign group keys with OEM-aware fallback when explicit Retest is absent.
+    for (const row of rows) {
+      const building = String(row?.[buildingCol] ?? 'Building').trim() || 'Building';
+      const profile = getBuildingProfile(building);
+      const stageVal = stageCol ? toKey(row?.[stageCol]).toLowerCase() : '';
+
+      let testType = testTypeCol ? normalizeTestType(row?.[testTypeCol]) : '';
+
+      const shouldInferByStage = !profile.hasExplicitRetest && profile.hasOemStage && profile.hasNonOemStage;
+      if (shouldInferByStage) {
+        if (stageVal === 'oem') testType = 'Retest';
+        else if (stageVal) testType = 'Original';
+      }
+
       if (!buildingGroups[building]) buildingGroups[building] = {};
       const typeKey = testType || 'All';
       if (!buildingGroups[building][typeKey]) buildingGroups[building][typeKey] = [];
