@@ -1204,7 +1204,7 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
     const raw = String(value ?? '').trim();
     if (!raw) return '';
     const lower = raw.toLowerCase();
-    if (lower === 'original') return 'Original';
+    if (lower === 'original') return '';
     if (lower === 'retest') return 'Retest';
     return raw;
   };
@@ -1413,7 +1413,7 @@ async function exportCallsToKml() {
     const raw = String(value ?? '').trim();
     if (!raw) return '';
     const lower = raw.toLowerCase();
-    if (lower === 'original') return 'Original';
+    if (lower === 'original') return '';
     if (lower === 'retest') return 'Retest';
     return raw;
   };
@@ -1446,7 +1446,6 @@ async function exportCallsToKml() {
     const getBuildingProfile = (building) => {
       if (!buildingProfiles[building]) {
         buildingProfiles[building] = {
-          hasExplicitOriginal: false,
           hasExplicitRetest: false,
           hasAnyExplicitTestType: false,
           hasOemStage: false,
@@ -1456,14 +1455,13 @@ async function exportCallsToKml() {
       return buildingProfiles[building];
     };
 
-    // Pass 1: learn per-building characteristics for robust Original/Retest splitting.
+    // Pass 1: learn per-building characteristics for robust Retest splitting.
     for (const row of rows) {
       const building = String(row?.[buildingCol] ?? 'Building').trim() || 'Building';
       const profile = getBuildingProfile(building);
 
       const testType = testTypeCol ? normalizeTestType(row?.[testTypeCol]) : '';
       if (testType) profile.hasAnyExplicitTestType = true;
-      if (testType === 'Original') profile.hasExplicitOriginal = true;
       if (testType === 'Retest') profile.hasExplicitRetest = true;
 
       const stageVal = stageCol ? toKey(row?.[stageCol]).toLowerCase() : '';
@@ -1472,7 +1470,8 @@ async function exportCallsToKml() {
     }
 
     try {
-      logDebug(`[KML DEBUG] Building profiles: ${JSON.stringify(buildingProfiles)}`);
+      logDebug(`[KML DEBUG] Test type column: ${testTypeCol}, Stage column: ${stageCol}`);
+      logDebug(`[KML DEBUG] Building profiles: ${JSON.stringify(buildingProfiles, null, 2)}`);
     } catch {
       // ignore debug logging errors
     }
@@ -1488,13 +1487,26 @@ async function exportCallsToKml() {
       const shouldInferByStage = !profile.hasAnyExplicitTestType && !profile.hasExplicitRetest && profile.hasOemStage && profile.hasNonOemStage;
       if (shouldInferByStage) {
         if (stageVal === 'oem') testType = 'Retest';
-        else if (stageVal) testType = 'Original';
       }
 
       if (!buildingGroups[building]) buildingGroups[building] = {};
       const typeKey = testType || 'All';
       if (!buildingGroups[building][typeKey]) buildingGroups[building][typeKey] = [];
       buildingGroups[building][typeKey].push(row);
+    }
+
+    // Log per-building test type grouping for debugging
+    try {
+      const groupingDebug = {};
+      for (const building of Object.keys(buildingGroups)) {
+        groupingDebug[building] = {};
+        for (const typeKey of Object.keys(buildingGroups[building])) {
+          groupingDebug[building][typeKey] = buildingGroups[building][typeKey].length;
+        }
+      }
+      logDebug(`[KML DEBUG] Grouping counts by building/test-type: ${JSON.stringify(groupingDebug, null, 2)}`);
+    } catch {
+      // ignore debug logging errors
     }
   } else {
     buildingGroups['Building'] = { 'All': rows };
