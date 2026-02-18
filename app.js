@@ -1,8 +1,8 @@
 // --- Color Palette ---
 const GRAY = 'FFD9D9D9';
-const GREEN = 'FF1CA45C';
+const GREEN = 'FF000000';
 const ORANGE = 'FFFF9900';
-// Style for left columns in data rows (light green font, no fill)
+// Style for left columns in data rows (black font, no fill)
 const STYLE_LEFTCOL_GREEN = {
   font: { color: { rgb: GREEN } },
 };
@@ -27,7 +27,7 @@ const BORDER_THIN = {
   left: { style: 'thin', color: { rgb: 'FF000000' } },
   right: { style: 'thin', color: { rgb: 'FF000000' } },
 };
-// Style for left (gray+green) header
+// Style for left (gray header, black text)
 const STYLE_HEADER_LEFT = {
   font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: GREEN } },
   fill: { patternType: 'solid', fgColor: { rgb: GRAY } },
@@ -1233,8 +1233,12 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
   };
 
   for (const r of rows) {
-    const actualLat = parseNumber(r?.[c.actual_lat]);
-    const actualLon = parseNumber(r?.[c.actual_lon]);
+    const rawActualLat = parseNumber(r?.[c.actual_lat]);
+    const rawActualLon = parseNumber(r?.[c.actual_lon]);
+    const fallbackLat = c.location_lat ? parseNumber(r?.[c.location_lat]) : null;
+    const fallbackLon = c.location_lon ? parseNumber(r?.[c.location_lon]) : null;
+    const actualLat = rawActualLat ?? fallbackLat;
+    const actualLon = rawActualLon ?? fallbackLon;
     if (actualLat === null || actualLon === null) continue;
 
     const locLat = c.location_lat ? (parseNumber(r?.[c.location_lat]) ?? actualLat) : actualLat;
@@ -1259,11 +1263,11 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
       locAlt = actualAlt;
     }
 
-    if (actualAlt === null || locAlt === null) continue;
+    const hasAltitude = actualAlt !== null && locAlt !== null;
 
-    const delta = locAlt - actualAlt;
+    const delta = hasAltitude ? (locAlt - actualAlt) : null;
     const horizM = haversineMeters(actualLat, actualLon, locLat, locLon);
-    const vertM = Math.abs(delta);
+    const vertM = delta === null ? null : Math.abs(delta);
     const isOk = (vertM < OK_VERT_M) && (horizM < OK_HORIZ_M);
     const styleUrl = isOk ? `#${STYLE_OK}` : `#${STYLE_BAD}`;
 
@@ -1286,15 +1290,17 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
     if (pathVal) descLines.push(`Path ID: ${pathVal}`);
     if (pointVal) descLines.push(`Point ID: ${pointVal}`);
     if (c.location_source) descLines.push(`Location Source: ${toKey(r?.[c.location_source])}`);
-    descLines.push(`Actual Alt (MSL): ${actualAlt}`);
-    descLines.push(`Location Alt (MSL): ${locAlt}`);
-    descLines.push(`Delta (Location-Actual): ${delta}`);
+    descLines.push(`Actual Alt (MSL): ${actualAlt ?? '(missing)'}`);
+    descLines.push(`Location Alt (MSL): ${locAlt ?? '(missing)'}`);
+    descLines.push(`Delta (Location-Actual): ${delta ?? '(missing)'}`);
     descLines.push(`Horizontal distance: ${Number.isFinite(horizM) ? horizM.toFixed(2) : ''} m`);
-    descLines.push(`Vertical distance: ${Number.isFinite(vertM) ? vertM.toFixed(2) : ''} m`);
+    descLines.push(`Vertical distance: ${Number.isFinite(vertM) ? vertM.toFixed(2) : '(missing)'} m`);
     descLines.push(`Pass (H<${OK_HORIZ_M}m & V<${OK_VERT_M}m): ${isOk ? 'YES' : 'NO'}`);
     if (geoidSep !== null) descLines.push(`Geoid Sep (HAE-Geoid): ${geoidSep}`);
 
-    const coords = `${actualLon},${actualLat},${actualAlt} ${locLon},${locLat},${locAlt}`;
+    const coords = hasAltitude
+      ? `${actualLon},${actualLat},${actualAlt} ${locLon},${locLat},${locAlt}`
+      : `${actualLon},${actualLat} ${locLon},${locLat}`;
 
     const pm = [];
     pm.push('<Placemark>');
@@ -1302,8 +1308,8 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
     pm.push(`<styleUrl>${styleUrl}</styleUrl>`);
     pm.push(`<description><![CDATA[${cdataSafe(descLines.join('<br/>'))}]]></description>`);
     pm.push('<LineString>');
-    pm.push('<tessellate>0</tessellate>');
-    pm.push('<altitudeMode>absolute</altitudeMode>');
+    pm.push('<tessellate>1</tessellate>');
+    pm.push(`<altitudeMode>${hasAltitude ? 'absolute' : 'clampToGround'}</altitudeMode>`);
     pm.push(`<coordinates>${coords}</coordinates>`);
     pm.push('</LineString>');
     pm.push('</Placemark>');
@@ -1740,7 +1746,7 @@ function exportCurrentPivotToExcel() {
         const cell = wsBuilding[addr];
         if (!cell) continue;
         if (isTop) {
-          // Left headers gray+green, stage headers orange
+          // Left headers gray with black text, stage headers orange
           if (c < leftCols.length) cell.s = STYLE_HEADER_LEFT;
           else cell.s = STYLE_HEADER_STAGE;
         } else if (isSub) {
@@ -1767,12 +1773,20 @@ function exportCurrentPivotToExcel() {
     wsBuilding['!sheetViews'] = [{ pane: { state: 'frozen', xSplit: 0, ySplit: 5, topLeftCell: XLSX.utils.encode_cell({ r: 5, c: 0 }), activePane: 'bottomLeft' } }];
     // Find column indices for 'Hor 80%' and 'Ver 80%' in headerSub
     const eightyColIndices = [];
+    let hColIndex = -1, vColIndex = -1;
     for (let c = 0; c < headerTop.length; c++) {
-      if (headerSub[c] && (headerSub[c].toLowerCase().includes('hor 80%') || headerSub[c].toLowerCase().includes('ver 80%'))) {
-        eightyColIndices.push(c);
+      if (headerSub[c]) {
+        const label = headerSub[c].toLowerCase();
+        if (label.includes('hor 80%')) {
+          eightyColIndices.push(c);
+          hColIndex = c;
+        } else if (label.includes('ver 80%')) {
+          eightyColIndices.push(c);
+          vColIndex = c;
+        }
       }
     }
-    // Add a black border and apply red style to 80% columns in data rows
+    // Add a black border and apply red/green style to 80% columns in data rows
     const borderRange = { s: { r: 3, c: 0 }, e: { r: aoaBuilding.length - 1, c: headerTop.length - 1 } };
     // Find column indices for left columns: Building, Participant, OS, Section
     const leftColNames = ['Building', 'Participant', 'OS', 'Section'];
@@ -1783,6 +1797,16 @@ function exportCurrentPivotToExcel() {
       const isHeader = headerRowIndices.includes(r);
       // Detect if this is an empty row (all cells are empty string)
       const isEmptyRow = Array.isArray(aoaBuilding[r]) && aoaBuilding[r].every(v => v === '');
+      
+      // Get H and V values for this row
+      let hValue = hColIndex >= 0 ? aoaBuilding[r][hColIndex] : null;
+      let vValue = vColIndex >= 0 ? aoaBuilding[r][vColIndex] : null;
+      hValue = hValue !== null && hValue !== undefined ? parseFloat(hValue) : null;
+      vValue = vValue !== null && vValue !== undefined ? parseFloat(vValue) : null;
+      
+      // Determine if this row should be green (h < 50 AND v < 5)
+      const shouldBeGreen = hValue !== null && vValue !== null && hValue < 50 && vValue < 5;
+      
       for (let c = borderRange.s.c; c <= borderRange.e.c; c++) {
         const addr = XLSX.utils.encode_cell({ r, c });
         const cell = wsBuilding[addr];
@@ -1834,11 +1858,12 @@ function exportCurrentPivotToExcel() {
             };
           }
         }
-        // Apply red font to 80% columns in data rows only
+        // Apply color to 80% columns in data rows: green if h < 50 AND v < 5, otherwise red
         if (!isHeader && eightyColIndices.includes(c)) {
-          cell.s.font = { ...(cell.s.font || {}), color: { rgb: 'FFC00000' } };
+          const color = shouldBeGreen ? 'FF00B050' : 'FFC00000'; // Green: #00B050, Red: #C00000
+          cell.s.font = { ...(cell.s.font || {}), color: { rgb: color } };
         }
-        // Apply green font to left columns in data rows only
+        // Apply black font to left columns in data rows only
         if (!isHeader && leftColIndices.includes(c)) {
           cell.s.font = { ...(cell.s.font || {}), color: { rgb: GREEN } };
         }
@@ -1955,6 +1980,51 @@ function guessCallDimensionColumns(columns) {
       'loc alt hae',
     ]),
   };
+}
+
+function chooseBestCallStageColumn(columns, records, fallbackCol) {
+  const cols = Array.isArray(columns) ? columns : [];
+  const rows = Array.isArray(records) ? records : [];
+  const fallback = fallbackCol || null;
+  if (!cols.length || !rows.length) return fallback;
+
+  const stageCandidates = cols.filter((col) => {
+    const name = String(col ?? '').toLowerCase();
+    return name.includes('stage') || name.includes('stg') || name.includes('phase');
+  });
+
+  if (!stageCandidates.length) return fallback;
+
+  const sampleSize = Math.min(rows.length, 5000);
+  let bestCol = fallback;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  for (const col of stageCandidates) {
+    const values = new Set();
+    let oemCount = 0;
+
+    for (let i = 0; i < sampleSize; i++) {
+      const v = toKey(rows[i]?.[col]);
+      if (!v) continue;
+      values.add(v);
+      if (v.toLowerCase() === 'oem') oemCount++;
+    }
+
+    if (!values.size) continue;
+
+    let score = 0;
+    if (oemCount > 0) score += 1000;
+    if (values.size >= 2) score += 20;
+    if (values.size >= 4) score += 20;
+    if (col === fallback) score += 5;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestCol = col;
+    }
+  }
+
+  return bestCol || fallback;
 }
 
 function toKey(v) {
@@ -3123,6 +3193,7 @@ async function onCallFileSelected(file) {
   const columns = records.length > 0 ? Object.keys(records[0]) : [];
   callState.columns = columns;
   callState.dimCols = guessCallDimensionColumns(columns);
+  callState.dimCols.stage = chooseBestCallStageColumn(columns, records, callState.dimCols.stage);
   callState.records = records;
   callState.filteredRecords = records;
   callState.lastFileInfo = {
@@ -3135,6 +3206,7 @@ async function onCallFileSelected(file) {
   logDebug(`[onCallFileSelected] XLSX loaded: ${records.length} rows, ${columns.length} columns.`);
   logDebug(`[onCallFileSelected] Raw columns: ${columns.join(', ')}`);
   logDebug(`[onCallFileSelected] Detected dimCols: ${JSON.stringify(callState.dimCols)}`);
+  logDebug(`[onCallFileSelected] Selected stage column: ${callState.dimCols.stage ?? '(none)'}`);
   logDebug(`Correlation data initialization complete.`);
   console.log(`[onCallFileSelected] XLSX loaded: ${records.length} rows, ${columns.length} columns.`);
   console.log(`[onCallFileSelected] Raw columns: ${columns.join(', ')}`);
