@@ -473,7 +473,7 @@ const METRIC_LABELS = {
   v80: 'Ver 80%',
 };
 
-const SECTION_ORDER = ['Results', 'Location Technology', 'Handset', 'Path', 'Point'];
+const SECTION_ORDER = ['Results', 'Location Technology', 'Handet', 'Handset', 'Path ID', 'Path', 'Point ID', 'Point'];
 
 function sortByPreferredOrder(values, preferredOrder) {
   const pref = new Map(preferredOrder.map((v, i) => [String(v).toLowerCase(), i]));
@@ -858,14 +858,17 @@ function buildBuildingHealthAoA() {
     return lines;
   }
 
-  // If the dataset has a Section/Row Type column and includes a "point" section,
+  // If the dataset has a Section/Row Type column and includes a point-level section,
   // prefer using only point rows for health/bias (typically the most actionable level).
   let rows = all;
   if (rowTypeCol) {
-    const pointRows = all.filter((r) => String(r?.[rowTypeCol] ?? '').toLowerCase() === 'point');
+    const pointRows = all.filter((r) => {
+      const sectionVal = String(r?.[rowTypeCol] ?? '').toLowerCase();
+      return sectionVal === 'point' || sectionVal === 'point id';
+    });
     if (pointRows.length) {
       rows = pointRows;
-      lines.push(['Source rows', `Section=${rowTypeCol}=point (${rows.length.toLocaleString()} rows)`]);
+      lines.push(['Source rows', `Section=${rowTypeCol}=Point ID (${rows.length.toLocaleString()} rows)`]);
     } else {
       lines.push(['Source rows', `All sections (${rows.length.toLocaleString()} rows)`]);
     }
@@ -1524,7 +1527,7 @@ function exportCurrentPivotToExcel() {
   }
   for (const building of Object.keys(buildingGroups)) {
     let aoaBuilding = [];
-    const SECTION_ORDER = ['Results', 'Location Technology', 'Handset', 'Point', 'Path'];
+    const SECTION_ORDER = ['Results', 'Location Technology', 'Handet', 'Handset', 'Point ID', 'Point', 'Path ID', 'Path'];
     const buildingRows = buildingGroups[building].map(rowId => {
       const meta = pivot.rowMeta?.get(rowId) ?? {};
       const participant = meta['Participant'] || meta['participant'] || meta[leftCols.find(c => c.key.toLowerCase() === 'participant')?.key];
