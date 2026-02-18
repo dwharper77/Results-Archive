@@ -1438,100 +1438,35 @@ async function exportCallsToKml() {
     // ignore debug logging errors
   }
 
-  // Group records by building, then by test type
+  // Group records by building only - one KML per building
   const buildingGroups = {};
   if (buildingCol) {
-    const buildingProfiles = {};
-
-    const getBuildingProfile = (building) => {
-      if (!buildingProfiles[building]) {
-        buildingProfiles[building] = {
-          hasExplicitRetest: false,
-          hasAnyExplicitTestType: false,
-          hasOemStage: false,
-          hasNonOemStage: false,
-        };
-      }
-      return buildingProfiles[building];
-    };
-
-    // Pass 1: learn per-building characteristics for robust Retest splitting.
     for (const row of rows) {
       const building = String(row?.[buildingCol] ?? 'Building').trim() || 'Building';
-      const profile = getBuildingProfile(building);
-
-      const testType = testTypeCol ? normalizeTestType(row?.[testTypeCol]) : '';
-      if (testType) profile.hasAnyExplicitTestType = true;
-      if (testType === 'Retest') profile.hasExplicitRetest = true;
-
-      const stageVal = stageCol ? toKey(row?.[stageCol]).toLowerCase() : '';
-      if (stageVal === 'oem') profile.hasOemStage = true;
-      else if (stageVal) profile.hasNonOemStage = true;
-    }
-
-    try {
-      logDebug(`[KML DEBUG] Test type column: ${testTypeCol}, Stage column: ${stageCol}`);
-      logDebug(`[KML DEBUG] Building profiles: ${JSON.stringify(buildingProfiles, null, 2)}`);
-    } catch {
-      // ignore debug logging errors
-    }
-
-    // Pass 2: assign group keys with OEM-aware fallback when explicit Retest is absent.
-    for (const row of rows) {
-      const building = String(row?.[buildingCol] ?? 'Building').trim() || 'Building';
-      const profile = getBuildingProfile(building);
-      const stageVal = stageCol ? toKey(row?.[stageCol]).toLowerCase() : '';
-
-      let testType = testTypeCol ? normalizeTestType(row?.[testTypeCol]) : '';
-
-      // Only split by explicit test type values - no inference from stages
-      if (!buildingGroups[building]) buildingGroups[building] = {};
-      const typeKey = testType || 'All';
-      if (!buildingGroups[building][typeKey]) buildingGroups[building][typeKey] = [];
-      buildingGroups[building][typeKey].push(row);
-    }
-
-    // Log per-building test type grouping for debugging
-    try {
-      const groupingDebug = {};
-      for (const building of Object.keys(buildingGroups)) {
-        groupingDebug[building] = {};
-        for (const typeKey of Object.keys(buildingGroups[building])) {
-          groupingDebug[building][typeKey] = buildingGroups[building][typeKey].length;
-        }
-      }
-      logDebug(`[KML DEBUG] Grouping counts by building/test-type: ${JSON.stringify(groupingDebug, null, 2)}`);
-    } catch {
-      // ignore debug logging errors
+      if (!buildingGroups[building]) buildingGroups[building] = [];
+      buildingGroups[building].push(row);
     }
   } else {
-    buildingGroups['Building'] = { 'All': rows };
+    buildingGroups['Building'] = rows;
   }
 
-  // Export a KML for each building + test type combination
+  // Export a KML for each building
   const dt = new Date();
   const fileNames = [];
   for (const building of Object.keys(buildingGroups).sort()) {
-    const typeGroups = buildingGroups[building];
-    for (const testType of Object.keys(typeGroups).sort()) {
-      const buildingRows = typeGroups[testType];
-      const grouped = Boolean(participantCol || stageCol || locationSourceCol);
-      const testTypeLower = String(testType ?? '').toLowerCase();
-      const isRetestGroup = testTypeLower === 'retest';
-      const docLabel = isRetestGroup ? ' — Retest' : '';
-      const kml = buildCallKmlFromRows({
-        rows: buildingRows,
-        docName: grouped
-          ? `Call Vectors (by Stage/Participant/Location Technology) — ${building}${docLabel} (${buildingRows.length.toLocaleString()})`
-          : `Call Vectors — ${building}${docLabel} (${buildingRows.length.toLocaleString()})`,
-        groupByParticipant: grouped,
-      });
-      if (!kml) continue;
-      const typeFilePart = isRetestGroup ? '_Retest' : '';
-      const filename = `Call_Vectors_${safeFilePart(building)}${typeFilePart}_${grouped ? 'By_Participant_' : ''}${formatDateForFilename(dt)}.kml`;
-      downloadTextFile({ filename, text: kml, mime: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
-      fileNames.push(filename);
-    }
+    const buildingRows = buildingGroups[building];
+    const grouped = Boolean(participantCol || stageCol || locationSourceCol);
+    const kml = buildCallKmlFromRows({
+      rows: buildingRows,
+      docName: grouped
+        ? `Call Vectors (by Stage/Participant/Location Technology) — ${building} (${buildingRows.length.toLocaleString()})`
+        : `Call Vectors — ${building} (${buildingRows.length.toLocaleString()})`,
+      groupByParticipant: grouped,
+    });
+    if (!kml) continue;
+    const filename = `Call_Vectors_${safeFilePart(building)}_${grouped ? 'By_Participant_' : ''}${formatDateForFilename(dt)}.kml`;
+    downloadTextFile({ filename, text: kml, mime: 'application/vnd.google-earth.kml+xml;charset=utf-8' });
+    fileNames.push(filename);
   }
 
   if (fileNames.length > 0) {
