@@ -2181,11 +2181,13 @@ function getRowHeaderCols() {
   const osCol = state.dimCols.os;
   const sectionCol = state.dimCols.row_type;
   const idCol = state.dimCols.id;
+  const testTypeCol = state.dimCols.test_type;
 
   const cols = [];
   if (buildingCol) cols.push({ key: buildingCol, label: 'Building' });
   if (participantCol) cols.push({ key: participantCol, label: 'Participant' });
   if (osCol) cols.push({ key: osCol, label: 'OS' });
+  if (testTypeCol) cols.push({ key: testTypeCol, label: 'Test Type' });
   if (sectionCol) cols.push({ key: sectionCol, label: 'Section' });
   if (idCol) cols.push({ key: idCol, label: 'Identifier' });
 
