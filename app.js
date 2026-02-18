@@ -1199,6 +1199,16 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
   const stageCol = c.stage;
   const locationSourceCol = c.location_source;
 
+  const addCount = (obj, key, inc = 1) => {
+    const k = toKey(key) || '(blank)';
+    obj[k] = (obj[k] || 0) + inc;
+  };
+  const stageStats = {
+    input: {},
+    exported: {},
+    skippedNoCoords: {},
+  };
+
   const makeNode = () => ({ count: 0, items: [], children: new Map() });
   const root = makeNode();
 
@@ -1233,13 +1243,19 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
   };
 
   for (const r of rows) {
+    const stageBucket = stageCol ? toKey(r?.[stageCol]) : '';
+    addCount(stageStats.input, stageBucket);
+
     const rawActualLat = parseNumber(r?.[c.actual_lat]);
     const rawActualLon = parseNumber(r?.[c.actual_lon]);
     const fallbackLat = c.location_lat ? parseNumber(r?.[c.location_lat]) : null;
     const fallbackLon = c.location_lon ? parseNumber(r?.[c.location_lon]) : null;
     const actualLat = rawActualLat ?? fallbackLat;
     const actualLon = rawActualLon ?? fallbackLon;
-    if (actualLat === null || actualLon === null) continue;
+    if (actualLat === null || actualLon === null) {
+      addCount(stageStats.skippedNoCoords, stageBucket);
+      continue;
+    }
 
     const locLat = c.location_lat ? (parseNumber(r?.[c.location_lat]) ?? actualLat) : actualLat;
     const locLon = c.location_lon ? (parseNumber(r?.[c.location_lon]) ?? actualLon) : actualLon;
@@ -1315,6 +1331,19 @@ function buildCallKmlFromRows({ rows, docName, groupByParticipant = false }) {
     pm.push('</Placemark>');
 
     addPlacemark(r, pm.join(''));
+    addCount(stageStats.exported, stageBucket);
+  }
+
+  try {
+    const stageColName = stageCol || '(none)';
+    logDebug(`[KML DEBUG] Stage column used: ${stageColName}`);
+    logDebug(`[KML DEBUG] Input rows by stage: ${JSON.stringify(stageStats.input)}`);
+    logDebug(`[KML DEBUG] Exported rows by stage: ${JSON.stringify(stageStats.exported)}`);
+    if (Object.keys(stageStats.skippedNoCoords).length) {
+      logDebug(`[KML DEBUG] Skipped (missing lat/lon) by stage: ${JSON.stringify(stageStats.skippedNoCoords)}`);
+    }
+  } catch {
+    // ignore debug logging errors
   }
 
   const emitNode = (name, node) => {
@@ -1366,6 +1395,26 @@ async function exportCallsToKml() {
   const participantCol = callState.dimCols.participant;
   const stageCol = callState.dimCols.stage;
   const locationSourceCol = callState.dimCols.location_source;
+
+  const summarizeBy = (inRows, colName) => {
+    const out = {};
+    if (!colName) return out;
+    for (const row of inRows) {
+      const key = toKey(row?.[colName]) || '(blank)';
+      out[key] = (out[key] || 0) + 1;
+    }
+    return out;
+  };
+
+  try {
+    logDebug(`[KML DEBUG] Export rows count: ${rows.length}`);
+    logDebug(`[KML DEBUG] Stage column detected: ${stageCol ?? '(none)'}`);
+    logDebug(`[KML DEBUG] Location Source column detected: ${locationSourceCol ?? '(none)'}`);
+    if (stageCol) logDebug(`[KML DEBUG] Filtered rows by stage: ${JSON.stringify(summarizeBy(rows, stageCol))}`);
+    if (locationSourceCol) logDebug(`[KML DEBUG] Filtered rows by location source: ${JSON.stringify(summarizeBy(rows, locationSourceCol))}`);
+  } catch {
+    // ignore debug logging errors
+  }
 
   // Group records by building, then by test type
   const buildingGroups = {};
