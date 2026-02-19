@@ -1447,12 +1447,16 @@ async function exportCallsToKml() {
     for (const row of rows) {
       const building = String(row?.[buildingCol] ?? 'Building').trim() || 'Building';
       if (testTypeCol) {
+        const rawVal = String(row?.[testTypeCol] ?? '').trim();
         const testTypeVal = normalizeTestType(row?.[testTypeCol]);
         if (testTypeVal) {
           buildingsWithTestType.add(building);
         }
       }
     }
+    
+    console.log('[KML DEBUG] Buildings with test type values:', Array.from(buildingsWithTestType));
+    console.log('[KML DEBUG] Test type column:', testTypeCol);
     
     // Pass 2: group by building + test type (if applicable)
     for (const row of rows) {
@@ -1468,6 +1472,11 @@ async function exportCallsToKml() {
       if (!buildingGroups[building][groupKey]) buildingGroups[building][groupKey] = [];
       buildingGroups[building][groupKey].push(row);
     }
+    
+    console.log('[KML DEBUG] Final grouping:', Object.entries(buildingGroups).reduce((acc, [b, groups]) => {
+      acc[b] = Object.entries(groups).reduce((g, [k, v]) => { g[k] = v.length; return g; }, {});
+      return acc;
+    }, {}));
   } else {
     buildingGroups['Building'] = { 'All': rows };
   }
