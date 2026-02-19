@@ -29,7 +29,24 @@
       <h1>Results Archive</h1>
     </div>
     <div class="app-controls">
-      <button id="importDatabasesBtn" class="btn" type="button" style="margin-bottom: 12px; width: 100%;">Import Databases</button>
+      <div style="display: flex; flex-direction: column; gap: 0; width: 100%;">
+        <button id="importDatabasesBtn" class="btn" type="button" style="margin-bottom: 12px; width: 100%;">Import Databases</button>
+        <div class="building-picker">
+          <div class="building-picker-head">
+            <span class="label">Building(s)</span>
+            <div class="building-picker-actions">
+              <button id="selectAllBuildings" class="btn btn-small" disabled>Select all</button>
+              <button id="clearBuildings" class="btn btn-small" disabled>Clear</button>
+            </div>
+          </div>
+          <select id="buildingSelect" multiple size="4" disabled></select>
+          <div class="building-text-actions">
+            <input id="buildingText" type="text" disabled placeholder="Or type comma-separated (e.g., ATLDBC50, CHIDBC12)" />
+            <button id="applyBuildingText" class="btn btn-small" disabled>Apply</button>
+            <button id="clearBuildingText" class="btn btn-small" disabled>Clear</button>
+          </div>
+        </div>
+      </div>
       <div class="hidden-autoload">
         <label class="file">
           <span class="label">Load Building Results.pkl</span>
@@ -47,7 +64,6 @@
           <div id="lastCallDatasetInfo" class="muted small"></div>
         </label>
       </div>
-      <div class="building-picker">
         <div class="building-picker-head">
           <span class="label">Building(s)</span>
           <div class="building-picker-actions">
@@ -133,7 +149,7 @@
   </main>
 
   <footer class="app-footer muted">
-    <strong id="buildStamp">dev-239</strong>
+    <strong id="buildStamp"><dev-240></dev-240></strong>
   </footer>
 
 
